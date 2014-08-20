@@ -29,8 +29,6 @@
 .equ	BEACON		= 1	; Beep periodically when RC signal is lost
 
 .equ	CELL_MAX_DV	= 43	; Maximum battery cell deciV
-.equ	CELL_MIN_DV	= 35	; Minimum battery cell deciV
-
 .equ	CELL_COUNT	= 0	; 0: auto, >0: hard-coded number of cells (for reliable LVC > ~4S)
 .equ	BLIP_CELL_COUNT	= 1	; Blip out cell count before arming
 
@@ -1372,9 +1370,16 @@ i_rc_puls_rx:	rcall	evaluate_rc_init
 i_rc_puls3:
 		.endif
 
-		rcall	beep_f4			; signal: rcpuls ready
-		rcall	beep_f4
-		rcall	beep_f4
+		rcall 	beep_f1 		; signal: rcpuls ready [Custom tune!]
+		rcall 	beep_f2
+		rcall 	beep_f1
+		rcall 	beep_f2
+		rcall 	beep_f3
+		rcall 	beep_f2
+		rcall 	beep_f3
+		rcall 	beep_f4
+		rcall 	beep_f3
+		rcall 	beep_f4
 
 	; Fall through to restart_control
 ;-----bko-----------------------------------------------------------------
@@ -1436,8 +1441,10 @@ wait_for_power_on:
 		brne	wait_for_power_on
 		rcall	switch_power_off	; Brake may have been on
 		rcall	wait30ms
-		rcall	beep_f3			; Play beeps for signal lost, disarming
+		rcall 	beep_f4 		; Play beeps for signal lost, disarming
+		rcall	beep_f3 		; [Custom Tune!]
 		rcall	beep_f2
+		rcall 	beep_f1
 		rjmp	control_disarm		; Do not start motor until neutral signal received once again
 wait_for_power_rx:
 		rcall	evaluate_rc		; Only get rc_duty, don't set duty
