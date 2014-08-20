@@ -1,75 +1,39 @@
-# This Makefile is compatible with both BSD and GNU make
+# This Makefile compiles / uploads for AfroNfet boards & original Turnigy based boards only.
+# It is part of my simpleSimonK project for learning purposes and carries no implied support or garauntees whatsoever!
 
-ASM?= avra
+# Note - usbmodem00065771 should be replaced with FTDI device used for hack flashing to the SPI pads
+# Note - SLAB_USBtoUART is the silicon labs driver that I use for the AfroESC programmer
+
 SHELL = /bin/bash
 
 .SUFFIXES: .inc .hex
 
-ALL_TARGETS = afro.hex afro2.hex afro_hv.hex afro_nfet.hex arctictiger.hex birdie70a.hex bs_nfet.hex bs.hex bs40a.hex dlu40a.hex dlux.hex dys_nfet.hex hk200a.hex hm135a.hex kda.hex kda_8khz.hex kda_nfet.hex mkblctrl1.hex rb50a.hex rb70a.hex rct50a.hex tbs.hex tbs_hv.hex tp.hex tp_8khz.hex tp_i2c.hex tp_nfet.hex tp70a.hex tgy6a.hex tgy.hex
-AUX_TARGETS = diy0.hex
+ALL_TARGETS = afro_nfet.hex tgy.hex
 
 all: $(ALL_TARGETS)
 
 $(ALL_TARGETS): tgy.asm boot.inc
-$(AUX_TARGETS): tgy.asm boot.inc
 
 .inc.hex:
 	@test -e $*.asm || ln -s tgy.asm $*.asm
-	@echo "$(ASM) -fI -o $@ -D $*_esc -e $*.eeprom -d $*.obj $*.asm"
-	@set -o pipefail; $(ASM) -fI -o $@ -D $*_esc -e $*.eeprom -d $*.obj $*.asm 2>&1 | grep -v 'PRAGMA directives currently ignored'
+	@echo "avra -fI -o $@ -D $*_esc -e $*.eeprom -d $*.obj $*.asm"
+	@set -o pipefail; avra -fI -o $@ -D $*_esc -e $*.eeprom -d $*.obj $*.asm 2>&1 | grep -v 'PRAGMA directives currently ignored'
 	@test -L $*.asm && rm -f $*.asm || true
 
 test: all
 
 clean:
-	-rm -f $(ALL_TARGETS) *.obj *.eep.hex *.eeprom
+	-rm -f $(ALL_TARGETS) *.obj *.eep.hex *.eeprom *.hex *.cof
 
-binary_zip: $(ALL_TARGETS)
-	TARGET="tgy_`date '+%Y-%m-%d'`_`git rev-parse --verify --short HEAD`"; \
-	mkdir "$$TARGET" && \
-	cp $(ALL_TARGETS) "$$TARGET" && \
-	git archive -9 --prefix="$$TARGET/" -o "$$TARGET".zip HEAD && \
-	zip -9 "$$TARGET".zip "$$TARGET"/*.hex && ls -l "$$TARGET".zip; \
-	rm -f "$$TARGET"/*.hex; \
-	rmdir "$$TARGET"
 
-program_tgy_%: %.hex
-	avrdude -c stk500v2 -b 9600 -P /dev/ttyUSB0 -u -p m8 -U flash:w:$<:i
+upload:
+	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -U flash:w:tgy.hex:i
 
-program_usbasp_%: %.hex
-	avrdude -c usbasp -B.5 -p m8 -U flash:w:$<:i
+upload_afro:
+	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -U flash:w:afro_nfet.hex:i
 
-program_avrisp2_%: %.hex
-	avrdude -c avrisp2 -p m8 -U flash:w:$<:i
+read:
+	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
 
-program_dragon_%: %.hex
-	avrdude -c dragon_isp -p m8 -P usb -U flash:w:$<:i
-
-program_dapa_%: %.hex
-	avrdude -c dapa -p m8 -U flash:w:$<:i
-
-program_uisp_%: %.hex
-	uisp -dprog=dapa --erase --upload --verify -v if=$<
-
-bootload_usbasp:
-	avrdude -c usbasp -u -p m8 -U hfuse:w:`avrdude -c usbasp -u -p m8 -U hfuse:r:-:h | sed -n '/^0x/{s/.$$/a/;p}'`:m
-
-read: read_tgy
-
-read_tgy:
-	avrdude -c stk500v2 -b 9600 -P /dev/ttyUSB0 -u -p m8 -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i
-
-read_usbasp:
-	avrdude -c usbasp -u -p m8 -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i
-
-read_avrisp2:
-	avrdude -c avrisp2 -p m8 -P usb -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i
-
-read_dragon:
-	avrdude -c dragon_isp -p m8 -P usb -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i
-
-read_dapa:
-	avrdude -c dapa -p m8 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i
-
-read_uisp:
-	uisp -dprog=dapa --download -v of=flash.hex
+read_afro:
+	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -v -U flash:r:flash_afroRead.hex:i -U eeprom:r:eeprom_afroRead.hex:i -U lfuse:r:-:h -U hfuse:r:-:h

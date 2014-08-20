@@ -1,52 +1,3 @@
-;**** **** **** **** ****
-;
-;Die Benutzung der Software ist mit folgenden Bedingungen verbunden:
-;
-;1. Da ich alles kostenlos zur Verfügung stelle, gebe ich keinerlei Garantie
-;   und übernehme auch keinerlei Haftung für die Folgen der Benutzung.
-;
-;2. Die Software ist ausschließlich zur privaten Nutzung bestimmt. Ich
-;   habe nicht geprüft, ob bei gewerblicher Nutzung irgendwelche Patentrechte
-;   verletzt werden oder sonstige rechtliche Einschränkungen vorliegen.
-;
-;3. Jeder darf Änderungen vornehmen, z.B. um die Funktion seinen Bedürfnissen
-;   anzupassen oder zu erweitern. Ich würde mich freuen, wenn ich weiterhin als
-;   Co-Autor in den Unterlagen erscheine und mir ein Link zur entprechenden Seite
-;   (falls vorhanden) mitgeteilt wird.
-;
-;4. Auch nach den Änderungen sollen die Software weiterhin frei sein, d.h. kostenlos bleiben.
-;
-;!! Wer mit den Nutzungbedingungen nicht einverstanden ist, darf die Software nicht nutzen !!
-;
-; tp-18a
-; October 2004
-; autor: Bernhard Konze
-; email: bernhard.konze@versanet.de
-;--
-; Based on upon Bernhard's "tp-18a" and others; see
-; http://home.versanet.de/~b-konze/blc_18a/blc_18a.htm
-; Copyright (C) 2004 Bernhard Konze
-; Copyright (C) 2011-2012 Simon Kirby and other contributors
-; NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK. Always test
-; without propellers! Please respect Bernhard Konze's license above.
-;--
-; WARNING: I have blown FETs on Turnigy Plush 18A ESCs in previous versions
-; of this code with my modifications. Some bugs have since been fixed, such
-; as leaving PWM enabled while busy-looping forever outside of ISR code.
-; However, this does run with higher PWM frequency than most original code,
-; so higher FET temperatures may occur! USE AT YOUR OWN RISK, and maybe see
-; how it compares and let me know!
-;
-; WARNING: This does not check temperature or voltage ADC inputs.
-;
-; NOTE: We do 16-bit PWM on timer2 at full CPU clock rate resolution, using
-; tcnt2h to simulate the high byte. An input FULL to STOP range of 800 plus
-; a MIN_DUTY of 56 (a POWER_RANGE of 856) gives 800 unique PWM steps at an
-; about 18kHz on a 16MHz CPU clock. The output frequency is slightly lower
-; than F_CPU / POWER_RANGE due to cycles used in the interrupt as TCNT2 is
-; reloaded.
-;
-; Simon Kirby <sim@simulated.ca>
 ;
 ;-- Device ----------------------------------------------------------------
 ;
@@ -78,73 +29,8 @@
 ;
 ;-- Board -----------------------------------------------------------------
 ;
-; The following only works with avra or avrasm2.
-; For avrasm32, just comment out all but the include you need.
-#if defined(afro_esc)
-#include "afro.inc"		; AfroESC (ICP PWM, I2C, UART)
-#elif defined(afro2_esc)
-#include "afro2.inc"		; AfroESC 2 (ICP PWM, I2C, UART)
-#elif defined(afro_hv_esc)
-#include "afro_hv.inc"		; AfroESC HV with drivers (ICP PWM, I2C, UART)
-#elif defined(afro_nfet_esc)
-#include "afro_nfet.inc"	; AfroESC 3 with all nFETs (ICP PWM, I2C, UART)
-#elif defined(arctictiger_esc)
-#include "arctictiger.inc"	; Arctic Tiger 30A ESC with all nFETs (ICP PWM)
-#elif defined(birdie70a_esc)
-#include "birdie70a.inc"	; Birdie 70A with all nFETs (INT0 PWM)
-#elif defined(mkblctrl1_esc)
-#include "mkblctrl1.inc"	; MK BL-Ctrl v1.2 (ICP PWM, I2C, UART, high side PWM, sense hack)
-#elif defined(bs_esc)
-#include "bs.inc"		; HobbyKing BlueSeries / Mystery (INT0 PWM)
-#elif defined(bs_nfet_esc)
-#include "bs_nfet.inc"		; HobbyKing BlueSeries / Mystery with all nFETs (INT0 PWM)
-#elif defined(bs40a_esc)
-#include "bs40a.inc"		; HobbyKing BlueSeries / Mystery 40A (INT0 PWM)
-#elif defined(dlu40a_esc)
-#include "dlu40a.inc"		; Pulso Advance Plus 40A DLU40A inverted-PWM-opto (INT0 PWM)
-#elif defined(dlux_esc)
-#include "dlux.inc"		; HobbyKing Dlux Turnigy ESC 20A
-#elif defined(diy0_esc)
-#include "diy0.inc"		; HobbyKing DIY Open ESC (unreleased rev 0)
-#elif defined(dys_nfet_esc)
-#include "dys_nfet.inc"		; DYS 30A ESC with all nFETs (ICP PWM, I2C, UART)
-#elif defined(hk200a_esc)
-#include "hk200a.inc"		; HobbyKing SS Series 190-200A with all nFETs (INT0 PWM)
-#elif defined(hm135a_esc)
-#include "hm135a.inc"		; Hacker/Jeti Master 135-O-F5B 135A inverted-PWM-opto (INT0 PWM)
-#elif defined(kda_esc)
-#include "kda.inc"		; Keda/Multistar 12A, 20A, 30A (original) (INT0 PWM)
-#elif defined(kda_8khz_esc)
-#include "kda_8khz.inc"		; Keda/Multistar 30A (early 2014) (INT0 PWM)
-#elif defined(kda_nfet_esc)
-#include "kda_nfet.inc"		; Keda/Multistar 30A with all nFETs (INT0 PWM)
-#elif defined(rb50a_esc)
-#include "rb50a.inc"		; Red Brick 50A with all nFETs (INT0 PWM)
-#elif defined(rb70a_esc)
-#include "rb70a.inc"		; Red Brick 70A with all nFETs (INT0 PWM)
-#elif defined(rct50a_esc)
-#include "rct50a.inc"		; RCTimer 50A (MLF version) with all nFETs (INT0 PWM)
-#elif defined(tbs_esc)
-#include "tbs.inc"		; TBS 30A ESC (Team BlackSheep) with all nFETs (ICP PWM, UART)
-#elif defined(tbs_hv_esc)
-#include "tbs_hv.inc"		; TBS high voltage ESC (Team BlackSheep) with all nFETs (ICP PWM, UART)
-#elif defined(tp_esc)
-#include "tp.inc"		; TowerPro 25A/HobbyKing 18A "type 1" (INT0 PWM)
-#elif defined(tp_8khz_esc)
-#include "tp_8khz.inc"		; TowerPro 25A/HobbyKing 18A "type 1" (INT0 PWM) at 8kHz PWM
-#elif defined(tp_i2c_esc)
-#include "tp_i2c.inc"		; TowerPro 25A/HobbyKing 18A "type 1" (I2C)
-#elif defined(tp_nfet_esc)
-#include "tp_nfet.inc"		; TowerPro 25A with all nFETs "type 3" (INT0 PWM)
-#elif defined(tp70a_esc)
-#include "tp70a.inc"		; TowerPro 70A with BL8003 FET drivers (INT0 PWM)
-#elif defined(tgy6a_esc)
-#include "tgy6a.inc"		; Turnigy Plush 6A (INT0 PWM)
-#elif defined(tgy_esc)
-#include "tgy.inc"		; TowerPro/Turnigy Basic/Plush "type 2" (INT0 PWM)
-#else
-#error "Unrecognized board type."
-#endif
+.include "afro_nfet.inc"	; AfroESC 3 with all nFETs (ICP PWM, I2C, UART)
+;.include "tgy.inc"		; TowerPro/Turnigy Basic/Plush "type 2" (INT0 PWM)
 
 .equ	CPU_MHZ		= F_CPU / 1000000
 
