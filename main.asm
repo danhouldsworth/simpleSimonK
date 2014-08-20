@@ -13,7 +13,7 @@
 
 ;-- Board -----------------------------------------------------------------
 ;
-.include "afro_nfet.inc"	; AfroESC 3 with all nFETs (ICP PWM, UART)
+.include "afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM & UART)
 ;.include "tgy.inc"		; TowerPro/Turnigy Basic/Plush "type 2" (INT0 PWM)
 ;
 ;--------------------------------------------------------------------------
@@ -741,15 +741,8 @@ osccal_set:
 .endif
 		out	OSCCAL, temp1
 		ret
-;-----bko-----------------------------------------------------------------
-; Shift left temp7:temp6:temp5 temp1 times.
-lsl_temp567:
-		lsl	temp5
-		rol	temp6
-		rol	temp7
-		dec	temp1
-		brne	lsl_temp567
-		ret
+
+
 ;-----bko-----------------------------------------------------------------
 ; Multiply temp1:temp2 by temp3:temp4 and add high 16 bits of result to Y.
 ; Clobbers temp5, temp6, and leaves the lower byte in temp7.
