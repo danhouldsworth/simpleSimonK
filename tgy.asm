@@ -32,8 +32,7 @@
 .equ	LOW_BRAKE	= 1	; Enable brake on very short RC pulse ("thumb" brake like on Airtronics XL2P)
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction
 .equ	RC_PULS_REVERSE	= 0	; Enable RC-car style forward/reverse throttle
-.equ	RC_CALIBRATION	= 0	; Support run-time calibration of min/max pulse lengths
-.equ	SLOW_THROTTLE	= 0	; Limit maximum throttle jump to try to prevent overcurrent
+
 .equ	BEACON		= 1	; Beep periodically when RC signal is lost
 
 .equ	CELL_MAX_DV	= 43	; Maximum battery cell deciV
@@ -49,8 +48,6 @@
 
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 
-; These are now defaults which can be adjusted via throttle calibration
-; (stick high, stick low, (stick neutral) at start).
 ; These might be a bit wide for most radios, but lines up with POWER_RANGE.
 .equ	STOP_RC_PULS	= 1060	; Stop motor at or below this pulse length
 .equ	FULL_RC_PULS	= 1860	; Full speed at or above this pulse length
@@ -1573,77 +1570,6 @@ evaluate_rc_init:
 		sbrc	flags1, UART_MODE
 		rjmp	evaluate_rc_uart
 		.endif
-		.if RC_CALIBRATION && (USE_ICP || USE_INT0)
-		cbr	flags1, (1<<EVAL_RC)
-	; If input is above PROGRAM_RC_PULS, we try calibrating throttle
-		ldi2	YL, YH, puls_high_l	; Start with high pulse calibration
-		sbrc	flags0, NO_CALIBRATION	; Is it safe to calibrate now?
-		rjmp	evaluate_rc_puls
-		rjmp	rc_prog1
-rc_prog0:	rcall	wait240ms		; Wait for stick movement to settle
-	; Collect average of throttle input pulse length
-rc_prog1:	movw	temp3, rx_l		; Save the starting pulse length
-		wdr
-rc_prog2:	mul	ZH, ZH			; Clear 24-bit result registers (0 * 0 -> temp5:temp6)
-		clr	temp7
-		cpi	YL, low(puls_high_l)	; Are we learning the high pulse?
-		brne	rc_prog3		; No, maybe the low pulse
-		cpi2	temp3, temp4, PROGRAM_RC_PULS * CPU_MHZ, temp1
-		brcs	evaluate_rc_puls	; Lower than PROGRAM_RC_PULS - exit programming
-		ldi	temp1, 32 * 31/32	; Full speed pulse averaging count (slightly below exact)
-		rjmp	rc_prog5
-rc_prog3:	lds	temp1, puls_high_l	; If not learning the high pulse, we should stay below it
-		cp	temp3, temp1
-		lds	temp1, puls_high_h
-		cpc	temp4, temp1
-		brcc	rc_prog1		; Restart while pulse not lower than learned high pulse
-		cpi	YL, low(puls_low_l)	; Are we learning the low pulse?
-		brne	rc_prog4		; No, must be the neutral pulse
-		ldi	temp1, 32 * 17/16	; Stop/reverse pulse (slightly above exact)
-		rjmp	rc_prog5
-rc_prog4:	lds	temp1, puls_low_l
-		cp	temp3, temp1
-		lds	temp1, puls_low_h
-		cpc	temp4, temp1
-		brcs	rc_prog1		; Restart while pulse lower than learned low pulse
-		ldi	temp1, 32		; Neutral pulse measurement (exact)
-rc_prog5:	mov	tcnt2h, temp1		; Abuse tcnt2h as pulse counter
-rc_prog6:	wdr
-		sbrs	flags1, EVAL_RC		; Wait for next pulse
-		rjmp	rc_prog6
-		cbr	flags1, (1<<EVAL_RC)
-		movw	temp1, rx_l		; Atomic copy of new rc pulse length
-		add	temp5, temp1		; Accumulate 24-bit average
-		adc	temp6, temp2
-		adc	temp7, ZH
-		sub	temp1, temp3		; Subtract the starting pulse from this one
-		sbc	temp2, temp4		; to find the drift since the starting pulse
-	; Check for excessive drift with an emulated signed comparison -
-	; add the drift amount to offset the negative side to 0
-		adiwx	temp1, temp2, MAX_DRIFT_PULS * CPU_MHZ
-	; ..then subtract the 2*drift + 1 -- carry will be clear if
-	; we drifted outside of the range
-		sbiwx	temp1, temp2, 2 * MAX_DRIFT_PULS * CPU_MHZ + 1
-		brcc	rc_prog0		; Wait and start over if input moved
-		dec	tcnt2h
-		brne	rc_prog6		; Loop until average accumulated
-		ldi	temp1, 3
-		rcall	lsl_temp567		; Multiply by 8 (so that 32 loops makes average*256)
-		st	Y+, temp6		; Save the top 16 bits as the result
-		st	Y+, temp7
-	; One beep: high (full speed) pulse received
-		rcall	beep_f3
-		cpi	YL, low(puls_high_l+2)
-		breq	rc_prog1		; Go back to get low pulse
-	; Two beeps: low (stop/reverse) pulse received
-		rcall	wait30ms
-		rcall	beep_f3
-		cpi	YL, low(puls_low_l+2)
-		.if RC_PULS_REVERSE
-		breq	rc_prog1		; Go back to get neutral pulse
-		.else
-		breq	rc_prog_done
-		.endif
 	; Three beeps: neutral pulse received
 		rcall	wait30ms
 		rcall	beep_f3
@@ -1964,24 +1890,6 @@ set_new_duty10:	cp	YL, sys_control_l
 		brcs	set_new_duty11
 		movw	YL, sys_control_l	; Limit duty to sys_control
 set_new_duty11:
-.if SLOW_THROTTLE
-		; If sys_control is higher than twice the current duty,
-		; limit it to that. This means that a steady-state duty
-		; cycle can double at any time, but any larger change will
-		; be rate-limited.
-		ldi2	temp1, temp2, PWR_MIN_START
-		cp	YL, temp1
-		cpc	YH, temp2
-		brcs	set_new_duty12
-		movw	temp1, YL		; temp1:temp2 >= PWR_MIN_START
-set_new_duty12:	lsl	temp1
-		rol	temp2
-		cp	sys_control_l, temp1
-		cpc	sys_control_h, temp2
-		brcs	set_new_duty13
-		movw	sys_control_l, temp1
-set_new_duty13:
-.endif
 		ldi2	temp1, temp2, MAX_POWER
 		sub	temp1, YL		; Calculate OFF duty
 		sbc	temp2, YH
@@ -2626,8 +2534,7 @@ run6_2:		cbr	flags1, (1<<STARTUP)
 		sts	start_modulate, ZH
 		RED_off
 		; Build up sys_control to MAX_POWER in steps.
-		; If SLOW_THROTTLE is disabled, this only limits
-		; initial start ramp-up; once running, sys_control
+		; once running, sys_control
 		; will stay at MAX_POWER unless timing is lost.
 		adiwx	YL, YH, (POWER_RANGE + 31) / 32
 		ldi2	temp1, temp2, MAX_POWER
