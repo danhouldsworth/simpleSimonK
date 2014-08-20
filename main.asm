@@ -253,24 +253,24 @@ eeprom_end:	.byte	1
 ; When multiple interrupts are pending, the vectors are executed from top
 ; (ext_int0) to bottom.
 		rjmp reset	; reset
-		rjmp rcp_int	; ext_int0
-		reti		; ext_int1
-		reti		; t2oc_int
-		ijmp		; t2ovfl_int
-		rjmp rcp_int	; icp1_int
-		rjmp t1oca_int	; t1oca_int
-		reti		; t1ocb_int
-		rjmp t1ovfl_int	; t1ovfl_int
-		reti		; t0ovfl_int
-		reti		; spi_int
-		rjmp urxc_int	; urxc
-		reti		; udre
-		reti		; utxc
-		reti		; adc_int
-		reti		; eep_int
-		reti		; aci_int
-		rjmp i2c_int	; twi_int
-		reti		; spmc_int
+		rjmp rcp_int	; ext_int0	INT0addr=$001	; External Interrupt0 Vector Address
+		reti		; ext_int1	INT1addr=$002	; External Interrupt1 Vector Address
+		reti		; t2oc_int	OC2addr =$003	; Output Compare2 Interrupt Vector Addre
+		ijmp		; t2ovfl_int	OVF2addr=$004	; Overflow2 Interrupt Vector Address
+		rjmp rcp_int	; icp1_int	ICP1addr=$005	; Input Capture1 Interrupt Vector Addres
+		rjmp t1oca_int	; t1oca_int	OC1Aaddr=$006	; Output Compare1A Interrupt Vector Addr
+		reti		; t1ocb_int	OC1Baddr=$007	; Output Compare1B Interrupt Vector Addr
+		rjmp t1ovfl_int	; t1ovfl_int	OVF1addr=$008	; Overflow1 Interrupt Vector Address
+		reti		; t0ovfl_int	OVF0addr=$009	; Overflow0 Interrupt Vector Address
+		reti		; spi_int	SPIaddr =$00a	; SPI Interrupt Vector Address
+		rjmp urxc_int	; urxc		URXCaddr=$00b	; USART Receive Complete Interrupt Vecto
+		reti		; udre		UDREaddr=$00c	; USART Data Register Empty Interrupt Ve
+		reti		; utxc		UTXCaddr=$00d	; USART Transmit Complete Interrupt Vect
+		reti		; adc_int	ADCCaddr=$00e	; ADC Interrupt Vector Address
+		reti		; eep_int	ERDYaddr=$00f	; EEPROM Interrupt Vector Address
+		reti		; aci_int	ACIaddr =$010	; Analog Comparator Interrupt Vector Add
+		reti 	 	; twi_int	TWIaddr =$011	; Irq. vector address for Two-Wire Inter
+		reti		; spmc_int	SPMaddr =$012	; SPM complete Interrupt Vector Address
 
 eeprom_defaults_w:
 	.db low(EEPROM_SIGN), high(EEPROM_SIGN)
@@ -543,9 +543,9 @@ falling_edge:
 		sbi2	i_temp1, i_temp2, MAX_RC_PULS * CPU_MHZ	; Put back to start time
 		sub	rx_l, i_temp1		; Subtract start time from current time
 		sbc	rx_h, i_temp2
-.if MAX_RC_PULS * CPU_MHZ > 0xffff
-.error "MAX_RC_PULS * CPU_MHZ too big to fit in two bytes -- adjust it or the rcp_int code"
-.endif
+		.if MAX_RC_PULS * CPU_MHZ > 0xffff
+		.error "MAX_RC_PULS * CPU_MHZ too big to fit in two bytes -- adjust it or the rcp_int code"
+		.endif
 		sbr	flags1, (1<<EVAL_RC)
 rcpint_exit:	rcp_int_rising_edge i_temp1	; Set next int to rising edge
 		out	SREG, i_sreg
@@ -554,7 +554,7 @@ rcpint_exit:	rcp_int_rising_edge i_temp1	; Set next int to rising edge
 ;-----bko-----------------------------------------------------------------
 ; MK BL-Ctrl v1, v2 compatible input control
 ; Ctrl-click Settings in MKTool for reversing and additional settings
-i2c_int:
+
 ;-----bko-----------------------------------------------------------------
 urxc_int:
 ; This is Bernhard's serial protocol implementation in the UART
