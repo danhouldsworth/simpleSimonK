@@ -41,9 +41,6 @@
 .equ	CELL_COUNT	= 0	; 0: auto, >0: hard-coded number of cells (for reliable LVC > ~4S)
 .equ	BLIP_CELL_COUNT	= 1	; Blip out cell count before arming
 
-.equ	DEBUG_ADC_DUMP	= 0	; Output an endless loop of all ADC values (no normal operation)
-.equ	MOTOR_DEBUG	= 0	; Output sync pulses on MOSI or SCK, debug flag on MISO
-
 .equ	MOTOR_ID	= 1	; MK-style I2C motor ID, or UART motor number
 
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
@@ -114,7 +111,6 @@
 .equ	EEPROM_OFFSET	= 0x80		; Offset into 512-byte space (why not)
 
 ; Conditional code inclusion
-.set	DEBUG_TX	= 0		; Output debugging on UART TX pin
 .set	ADC_READ_NEEDED	= 0		; Reading from ADCs
 
 ;**** **** **** **** ****
@@ -615,33 +611,6 @@ eeprom_defaults_w:
 		comp_adc_disable
 	.else
 		comp_adc_enable
-	.endif
-.endmacro
-
-;-- Timing and motor debugging macros ------------------------------------
-
-.macro flag_on
-	.if MOTOR_DEBUG && (DIR_PB & (1<<4)) == 0
-		sbi	PORTB, 4
-	.endif
-.endmacro
-.macro flag_off
-	.if MOTOR_DEBUG && (DIR_PB & (1<<4)) == 0
-		cbi	PORTB, 4
-	.endif
-.endmacro
-.macro sync_on
-	.if MOTOR_DEBUG && (DIR_PB & (1<<3)) == 0
-		sbi	PORTB, 3
-	.elif MOTOR_DEBUG && (DIR_PB & (1<<5)) == 0
-		sbi	PORTB, 5
-	.endif
-.endmacro
-.macro sync_off
-	.if MOTOR_DEBUG && (DIR_PB & (1<<3)) == 0
-		cbi	PORTB, 3
-	.elif MOTOR_DEBUG && (DIR_PB & (1<<5)) == 0
-		cbi	PORTB, 5
 	.endif
 .endmacro
 
@@ -1361,150 +1330,11 @@ hw_error_ret:	ret
 
 .endif
 
-;-------------------------------------------------------------------------
-; ADC value dumping via the UART. Expects vt100ish.
-.if DEBUG_ADC_DUMP
-.set DEBUG_TX = 1
-.set ADC_READ_NEEDED = 1
-
-adc_input_dump:
-		ldi	temp4, 27
-		rcall	tx_byte
-		ldi	temp4, '['
-		rcall	tx_byte
-		ldi	temp4, '2'
-		rcall	tx_byte
-		ldi	temp4, 'J'
-		rcall	tx_byte
-
-adc_input_dump1:
-		ldi	temp2, 5
-		rcall	wait1
-		ldi	temp4, 27
-		rcall	tx_byte
-		ldi	temp4, '['
-		rcall	tx_byte
-		ldi	temp4, 'H'
-		rcall	tx_byte
-
-		.if defined(mux_a)
-		ldi	temp4, 'A'
-		rcall	tx_byte
-		ldi	temp4, mux_a
-		rcall	adc_read
-		rcall	colon_hex_write
-		.endif
-		.if defined(mux_b)
-		ldi	temp4, 'B'
-		rcall	tx_byte
-		ldi	temp4, mux_b
-		rcall	adc_read
-		rcall	colon_hex_write
-		.endif
-		.if defined(mux_c)
-		ldi	temp4, 'C'
-		rcall	tx_byte
-		ldi	temp4, mux_c
-		rcall	adc_read
-		rcall	colon_hex_write
-		.endif
-		.if defined(mux_voltage)
-		ldi	temp4, '#'
-		rcall	tx_byte
-		rcall	adc_cell_count
-		clr	temp2
-		rcall	colon_hex_write
-		.endif
-
-		rcall	tx_crlf
-
-		clr	YL
-adc_loop:
-		ldi	temp4, 'A'
-		rcall	tx_byte
-		ldi	temp4, 'D'
-		rcall	tx_byte
-		ldi	temp4, 'C'
-		rcall	tx_byte
-		mov	temp4, YL
-		rcall	tx_hex_nibble
-
-		mov	temp4, YL
-		rcall	adc_read
-		rcall	colon_hex_write
-
-		inc	YL
-		andi	YL, 0xf
-		breq	adc_input_dump1
-		cpi	YL, 8
-		brne	adc_loop
-		ldi	YL, 0xe		; Jump to band-gap reference (no ADC8 - ADC13)
-		rjmp	adc_loop
-
-		ret
-.endif
-
-.if DEBUG_TX
-init_debug_tx:
-.if !defined(txd) && DIR_PD & (1<<1)
-.error "Cannot use UART TX with this pin configuration"
-.endif
-	; Initialize TX for debugging on boards with free TX pin
-		.equ	D_BAUD_RATE = 38400
-		.equ	D_UBRR_VAL = F_CPU / D_BAUD_RATE / 16 - 1
-		outi	UBRRH, high(D_UBRR_VAL), temp1
-		outi	UBRRL, low(D_UBRR_VAL), temp1
-;		sbi	UCSRA, U2X		; Double speed
-		sbi	UCSRB, TXEN
-		outi	UCSRC, (1<<URSEL)|(1<<UCSZ1)|(1<<UCSZ0), temp1	; N81
-		ret
-
-tx_hex_byte:
-		mov	temp4, temp3
-		swap	temp4
-		rcall	tx_hex_nibble
-		mov	temp4, temp3
-tx_hex_nibble:
-		andi	temp4, 0xf
-		ori	temp4, '0'
-		cpi	temp4, '9' + 1
-		brcs	tx_byte
-		subi	temp4, '9' + 1 - 'a'
-tx_byte:
-		sbis	UCSRA, UDRE
-		rjmp	tx_byte
-		out	UDR, temp4
-		ret
-
-tx_crlf:
-		ldi	temp4, 13
-		rcall	tx_byte
-		ldi	temp4, 10
-		rjmp	tx_byte
-
-tx_colonhex:
-		ldi	temp4, ':'
-		rcall	tx_byte
-		ldi	temp4, ' '
-		rcall	tx_byte
-		ldi	temp4, '0'
-		rcall	tx_byte
-		ldi	temp4, 'x'
-		rjmp	tx_byte
-
-colon_hex_write:
-		rcall	tx_colonhex
-		mov	temp3, temp2
-		rcall	tx_hex_byte
-		mov	temp3, temp1
-		rcall	tx_hex_byte
-		rjmp	tx_crlf
-.endif
 
 ;-- Battery cell count ---------------------------------------------------
 ; Assuming a LiPo cell will never exceed 4.3V, we can estimate
 ; the number of cells by dividing the measured voltage by 4.3.
-.if defined(mux_voltage) && (DEBUG_ADC_DUMP || (!CELL_COUNT && BLIP_CELL_COUNT))
+.if defined(mux_voltage) && (!CELL_COUNT && BLIP_CELL_COUNT)
 .set ADC_READ_NEEDED = 1
 
 adc_cell_count:
@@ -2458,14 +2288,12 @@ run1:		.if MOTOR_REVERSE
 
 run_forward:	rcall	wait_for_high
 		com1com2
-		sync_off
 		rcall	wait_for_low
 		com2com3
 		rcall	wait_for_high
 		com3com4
 		rcall	wait_for_low
 		com4com5
-		sync_on
 		rcall	wait_for_high
 		com5com6
 		rcall	wait_for_low
@@ -2474,14 +2302,12 @@ run_forward:	rcall	wait_for_high
 
 run_reverse:	rcall	wait_for_low
 		com1com6
-		sync_on
 		rcall	wait_for_high
 		com6com5
 		rcall	wait_for_low
 		com5com4
 		rcall	wait_for_high
 		com4com3
-		sync_off
 		rcall	wait_for_low
 		com3com2
 		rcall	wait_for_high
@@ -2742,11 +2568,8 @@ wait_for_edge2:	sbrs	flags0, OCT1_PENDING
 .if 0
 		; Visualize comparator output on the flag pin
 		sbrc	temp3, ACO
-		flag_on
 		nop
-		flag_off
 		sbrs	temp3, ACO
-		flag_on
 .endif
 		eor	temp3, flags1
 		.if defined(HIGH_SIDE_PWM)
@@ -2762,11 +2585,9 @@ wait_for_edge3:	dec	XL			; Zero-cross has happened
 		brne	wait_for_edge2		; Check again unless temp1 is zero
 
 wait_commutation:
-		flag_on
 		rcall	update_timing
 		sbrs	flags1, STARTUP
 		rcall	wait_OCT1_tot
-		flag_off
 		lds	temp1, powerskip
 		cpse	temp1, ZH
 		cbr	flags1, (1<<POWER_ON)	; Disable power when powerskipping
@@ -2830,15 +2651,11 @@ clear_loop1:	cp	ZL, r0
 
 	; Initialize ports
 		outi	PORTB, INIT_PB, temp1
-		outi	DDRB, DIR_PB | (MOTOR_DEBUG<<3) | (MOTOR_DEBUG<<4) | (MOTOR_DEBUG<<5), temp1
+		outi	DDRB, DIR_PB, temp1
 		outi	PORTC, INIT_PC, temp1
 		outi	DDRC, DIR_PC, temp1
 		outi	PORTD, INIT_PD, temp1
 		outi	DDRD, DIR_PD, temp1
-
-		.if DEBUG_TX
-		rcall	init_debug_tx
-		.endif
 
 	; Start timers except output PWM
 		outi	TCCR0, T0CLK, temp1	; timer0: beep control, delays
@@ -2854,11 +2671,6 @@ clear_loop1:	cp	ZL, r0
 	; Wait for power to settle -- this must be no longer than 64ms
 	; (with 64ms delayed start fuses) for i2c V2 protocol detection
 		rcall	wait30ms		; Running at unadjusted speed(!)
-
-	; Debugging hooks
-		.if DEBUG_ADC_DUMP
-		rcall	adc_input_dump
-		.endif
 
 	; Read EEPROM block to RAM
 		rcall	eeprom_read_block	; Also calls osccal_set
