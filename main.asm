@@ -1395,21 +1395,8 @@ control_disarm:
 		out	TIFR, temp1		; Clear TOIE1, OCIE1A, and TOIE2 flags
 		out	TIMSK, temp1		; Enable t1ovfl_int, t1oca_int, t2ovfl_int
 
-		.if defined(HK_PROGRAM_CARD)
-	; This program card seems to send data at 1200 baud N81,
-	; Messages start with 0xdd 0xdd, have 7 bytes of config,
-	; and end with 0xde, sent two seconds after power-up or
-	; after any jumper change.
-		.equ	BAUD_RATE = 1200
-		.equ	UBRR_VAL = F_CPU / BAUD_RATE / 16 - 1
-		outi	UBRRH, high(UBRR_VAL), temp1
-		outi	UBRRL, low(UBRR_VAL), temp1
-		sbi	UCSRB, RXEN		; Do programming card rx by polling
-		outi	UCSRC, (1<<URSEL)|(1<<UCSZ1)|(1<<UCSZ0), temp1	; N81
-		.endif
-
 	; Initialize input sources (rc-puls)
-		.if USE_UART && !defined(HK_PROGRAM_CARD)
+		.if USE_UART
 		.equ	BAUD_RATE = 38400
 		.equ	UBRR_VAL = F_CPU / BAUD_RATE / 16 - 1
 		outi	UBRRH, high(UBRR_VAL), temp1
@@ -1432,8 +1419,6 @@ i_rc_puls1:	clr	rc_timeout
 		sts	rct_boot, ZH
 		sts	rct_beacon, ZH
 i_rc_puls2:	wdr
-		.if defined(HK_PROGRAM_CARD)
-		.endif
 		sbrc	flags1, EVAL_RC
 		rjmp	i_rc_puls_rx
 		.if BOOT_JUMP
