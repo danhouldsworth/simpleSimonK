@@ -12,10 +12,10 @@ ALL_TARGETS = afro_nfet.hex tgy.hex
 
 all: $(ALL_TARGETS)
 
-$(ALL_TARGETS): tgy.asm boot.inc
+$(ALL_TARGETS): main.asm boot.inc macros.inc hardware_diagnostics.inc
 
 .inc.hex:
-	@test -e $*.asm || ln -s tgy.asm $*.asm
+	@test -e $*.asm || ln -s main.asm $*.asm
 	@echo "avra -fI -o $@ -D $*_esc -e $*.eeprom -d $*.obj $*.asm"
 	@set -o pipefail; avra -fI -o $@ -D $*_esc -e $*.eeprom -d $*.obj $*.asm 2>&1 | grep -v 'PRAGMA directives currently ignored'
 	@test -L $*.asm && rm -f $*.asm || true
