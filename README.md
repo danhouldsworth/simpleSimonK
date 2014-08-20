@@ -25,8 +25,8 @@ Notes to self :
 
 Questions to self:
 
-1) Understand what is going on with 'Active Freewheeling', 'Regenerative Braking', 'Demag compensation'
-2) In particular, is COMP_PWM = 1, active freewheeling or regenerative braking?
+1. Understand what is going on with 'Active Freewheeling', 'Regenerative Braking', 'Demag compensation'
+2. In particular, is COMP_PWM = 1, active freewheeling or regenerative braking?
 
 -----
 

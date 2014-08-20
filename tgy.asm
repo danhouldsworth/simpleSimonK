@@ -45,7 +45,6 @@
 .equ	DEBUG_ADC_DUMP	= 0	; Output an endless loop of all ADC values (no normal operation)
 .equ	MOTOR_DEBUG	= 0	; Output sync pulses on MOSI or SCK, debug flag on MISO
 
-.equ	I2C_ADDR	= 0x50	; MK-style I2C address
 .equ	MOTOR_ID	= 1	; MK-style I2C motor ID, or UART motor number
 
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
@@ -151,7 +150,7 @@
 .def	flags1		= r17	; state flags
 	.equ	POWER_ON	= 0	; if set, switching fets is enabled
 	.equ	FULL_POWER	= 1	; 100% on - don't switch off, but do OFF_CYCLE working
-	.equ	I2C_MODE	= 2	; if receiving updates via I2C
+;	.equ	I2C_MODE	= 2	; if receiving updates via I2C
 	.equ	UART_MODE	= 3	; if receiving updates via UART
 	.equ	EVAL_RC		= 4	; if set, evaluate rc command while waiting for OCT1
 	.equ	ACO_EDGE_HIGH	= 5	; if set, looking for ACO high - same bit position as ACO
@@ -214,11 +213,6 @@ rev_scale_l:	.byte	1
 rev_scale_h:	.byte	1
 neutral_l:	.byte	1	; Offset for neutral throttle (in CPU_MHZ)
 neutral_h:	.byte	1
-.if USE_I2C
-i2c_max_pwm:	.byte	1	; MaxPWM for MK (NOTE: 250 while stopped is magic and enables v2)
-i2c_rx_state:	.byte	1
-i2c_blc_offset:	.byte	1
-.endif
 motor_count:	.byte	1	; Motor number for serial control
 brake_sub:	.byte	1	; Brake speed subtrahend (power of two)
 brake_want:	.byte	1	; Type of brake desired
@@ -233,16 +227,6 @@ puls_low_l:	.byte	1	;  |- saved pulse lengths during throttle calibration
 puls_low_h:	.byte	1	;  |  (order used by rc_prog)
 puls_neutral_l:	.byte	1	;  |
 puls_neutral_h:	.byte	1	; -'
-.if USE_I2C
-blc_revision:	.byte	1	; BLConfig revision
-blc_setmask:	.byte	1	; BLConfig settings mask
-blc_pwmscaling:	.byte	1	; BLConfig pwm scaling
-blc_currlimit:	.byte	1	; BLConfig current limit
-blc_templimit:	.byte	1	; BLConfig temperature limit
-blc_currscale:	.byte	1	; BLConfig current scaling
-blc_bitconfig:	.byte	1	; BLConfig bitconfig (1 == MOTOR_REVERSE)
-blc_checksum:	.byte	1	; BLConfig checksum (0xaa + above bytes)
-.endif
 eeprom_end:	.byte	1
 ;-----bko-----------------------------------------------------------------
 ;**** **** **** **** ****
@@ -300,13 +284,6 @@ eeprom_defaults_w:
 	.db byte1(FULL_RC_PULS * CPU_MHZ), byte2(FULL_RC_PULS * CPU_MHZ)
 	.db byte1(STOP_RC_PULS * CPU_MHZ), byte2(STOP_RC_PULS * CPU_MHZ)
 	.db byte1(MID_RC_PULS * CPU_MHZ), byte2(MID_RC_PULS * CPU_MHZ)
-.if USE_I2C
-.equ	BL_REVISION	= 2
-	.db BL_REVISION, 144	; Revision, SetMask -- Settings mask should encode MOTOR_REVERSE bit
-	.db 255, 255		; PwmScaling, CurrentLimit
-	.db 127, 0		; TempLimit, CurrentScaling
-	.db 0, byte1(0xaa + BL_REVISION + 144 + 255 + 255 + 127 + 0 + 0)	; BitConfig, crc (0xaa + sum of above bytes)
-.endif
 
 ;-- Instruction extension macros -----------------------------------------
 
@@ -969,111 +946,6 @@ rcpint_exit:	rcp_int_rising_edge i_temp1	; Set next int to rising edge
 ; MK BL-Ctrl v1, v2 compatible input control
 ; Ctrl-click Settings in MKTool for reversing and additional settings
 i2c_int:
-	.if USE_I2C
-		in	i_sreg, SREG
-		in	i_temp1, TWSR
-		cpi	i_temp1, 0x60		; rx: received our SLA+W
-		breq	i2c_ack
-		cpi	i_temp1, 0x80		; rx: data available, previously ACKed
-		breq	i2c_rx_data
-		cpi	i_temp1, 0xa0		; rx: stop/restart condition (end of message)
-		breq	i2c_rx_stop
-		cpi	i_temp1, 0xa8		; tx: received our SLA+R
-		breq	i2c_tx_init
-		cpi	i_temp1, 0xb8		; tx: data request, previously ACKed
-		breq	i2c_tx_data
-		cpi	i_temp1, 0xf8		; tx: no relevant state information
-		breq	i2c_io_error
-		cpse	i_temp1, ZH		; Bus error due to illegal start/stop condition
-		rjmp	i2c_ack			; 0x88, 0xc0, etc.: enable listening
-i2c_io_error:	ldi	i_temp1, (1<<TWIE)|(1<<TWEN)|(1<<TWSTO)|(1<<TWEA)|(1<<TWINT)
-		rjmp	i2c_out
-
-i2c_tx_init:	sbrc	rx_l, 7			; BLConfig struct requested?
-		rjmp	i2c_tx_blconfig
-		out	TWDR, ZH		; Send 0 as Current (dummy)
-		ldi	i_temp1, 250		; Prepare MaxPWM value (250 when stopped enables MK BL-Ctrl proto v2)
-		sbrc	flags1, POWER_ON
-i2c_tx_datarep:	ldi	i_temp1, 255		; Send MaxPWM 255 when running (and repeat for Temperature)
-		sts	i2c_max_pwm, i_temp1
-		rjmp	i2c_ack
-i2c_tx_data:	sbrc	rx_l, 7			; BLConfig struct requested?
-		rjmp	i2c_tx_blconfig1
-		lds	i_temp1, i2c_max_pwm	; MaxPWM value (has special meaning for MK)
-		out	TWDR, i_temp1
-		rjmp	i2c_tx_datarep		; Send 255 for Temperature for which we should get a NACK (0xc0)
-
-i2c_tx_blconfig:
-		ldi	i_temp1, blc_revision	; First BLConfig structure member
-		sts	i2c_blc_offset, i_temp1
-i2c_tx_blconfig1:
-		mov	i_temp2, ZL		; Save Z
-		lds	ZL, i2c_blc_offset
-		ld	i_temp1, Z+
-		sts	i2c_blc_offset, ZL
-		out	TWDR, i_temp1
-		cpi	ZL, blc_checksum + 1	; Past last structure member?
-		mov	ZL, i_temp2		; Restore Z
-		breq	i2c_nack		; No more space
-		rjmp	i2c_ack
-
-i2c_nack:	ldi	i_temp1, (1<<TWIE)|(1<<TWEN)|(1<<TWINT)
-		rjmp	i2c_out
-i2c_ack:	ldi	i_temp1, (1<<TWIE)|(1<<TWEN)|(1<<TWEA)|(1<<TWINT)
-i2c_out:	out	TWCR, i_temp1
-		out	SREG, i_sreg
-		reti
-
-i2c_rx_stop:	lds	i_temp1, i2c_rx_state
-		cpse	i_temp1, ZH		; Skip if empty message or we were writing
-		sbr	flags1, (1<<EVAL_RC)|(1<<I2C_MODE)	; i2c message received
-		sts	i2c_rx_state, ZH
-		rjmp	i2c_ack
-i2c_rx_data:	lds	i_temp1, i2c_rx_state
-		inc	i_temp1
-		sts	i2c_rx_state, i_temp1
-		cpi	i_temp1, 1
-		brne	i2c_rx_data1
-		in	rx_h, TWDR		; Receive high byte from bus
-		mov	rx_l, ZH		; Zero low byte (we may not receive it)
-		rjmp	i2c_ack
-i2c_rx_data1:	cpi	i_temp1, 2
-		brne	i2c_rx_blc
-		in	rx_l, TWDR		; Receive low byte from bus
-		rjmp	i2c_ack
-
-i2c_rx_blc:	cpi	i_temp1, 3		; BLConfig revision
-		brne	i2c_rx_blc1
-		in	i_temp1, TWDR
-		cpi	i_temp1, 2
-		brne	i2c_nack		; We support only BLConfig revision 2
-		rjmp	i2c_ack
-i2c_rx_blc1:	cpi	i_temp1, 3 + blc_checksum - blc_revision	; Checksum field?
-		breq	i2c_rx_blccsum
-		mov	i_temp2, ZL		; Save Z
-		ldi	ZL, blc_revision - 3
-		add	ZL, i_temp1		; Z now points to BLConfig structure member
-		in	i_temp1, TWDR		; Read BLConfig data byte
-		st	Z, i_temp1		; Update structure member
-		mov	ZL, i_temp2		; Restore Z
-		lds	i_temp2, blc_checksum
-		add	i_temp2, i_temp1
-		sts	blc_checksum, i_temp2
-		rjmp	i2c_ack			; More expected
-i2c_rx_blccsum:	in	i_temp1, TWDR		; We can't do anything with the checksum, so just update it to remove setmask
-		lds	i_temp2, blc_setmask	; After receiving, zero the settings mask
-;out UDR, i_temp2
-		sbrc	i_temp2, 6		; Reset EEPROM if bit 6 set in blc_setmask
-		sbr	flags0, (1<<EEPROM_RESET)
-		sbrc	i_temp2, 7		; Write EEPROM if bit 7 set in blc_setmask
-		sbr	flags0, (1<<EEPROM_WRITE)
-		sub	i_temp1, i_temp2
-		ldi	i_temp2, 0b10010000	; Default to write EEPROM and Reverse direction options selected
-		add	i_temp1, i_temp2
-		sts	blc_setmask, i_temp2
-		sts	blc_checksum, i_temp1
-		rjmp	i2c_ack
-	.endif
 ;-----bko-----------------------------------------------------------------
 urxc_int:
 ; This is Bernhard's serial protocol implementation in the UART
@@ -1206,15 +1078,6 @@ eeprom_reset2:	lpm	temp1, Z+
 		brne	eeprom_reset2
 eeprom_good:	ret
 
-.if USE_I2C
-eeprom_reset_block:
-		cli
-		push	ZL
-		rcall	eeprom_reset1
-		pop	ZL
-		sei
-		ret
-.endif
 
 ;-----bko-----------------------------------------------------------------
 ; Read from or write to the EEPROM block. To avoid duplication, we use the
@@ -1695,7 +1558,7 @@ adc_wait:	sbic	ADCSRA, ADSC
 
 ;-----bko-----------------------------------------------------------------
 ; Unlike the normal evaluate_rc, we look here for programming mode (pulses
-; above PROGRAM_RC_PULS), unless we have received I2C or UART input.
+; above PROGRAM_RC_PULS), unless we have received UART input.
 ;
 ; With pulse width modulation (PWM) input, we have to be careful about
 ; oscillator drift. If we are running on a board without an external
@@ -1709,10 +1572,6 @@ evaluate_rc_init:
 		.if USE_UART
 		sbrc	flags1, UART_MODE
 		rjmp	evaluate_rc_uart
-		.endif
-		.if USE_I2C
-		sbrc	flags1, I2C_MODE
-		rjmp	evaluate_rc_i2c
 		.endif
 		.if RC_CALIBRATION && (USE_ICP || USE_INT0)
 		cbr	flags1, (1<<EVAL_RC)
@@ -1798,10 +1657,6 @@ evaluate_rc:
 		sbrc	flags1, UART_MODE
 		rjmp	evaluate_rc_uart
 		.endif
-		.if USE_I2C
-		sbrc	flags1, I2C_MODE
-		rjmp	evaluate_rc_i2c
-		.endif
 	; Fall through to evaluate_rc_puls
 ;-----bko-----------------------------------------------------------------
 .if USE_ICP || USE_INT0
@@ -1879,31 +1734,6 @@ rc_no_set_duty:	ldi	temp1, 0xff
 		cp	rc_timeout, temp1
 		adc	rc_timeout, ZH
 		ret
-;-----bko-----------------------------------------------------------------
-.if USE_I2C
-evaluate_rc_i2c:
-		movw	YL, rx_l		; Atomic copy of 16-bit input
-		cbr	flags1, (1<<EVAL_RC)
-	; Load settings from BLConfig structure (BL-Ctrl v2)
-		lds	temp1, blc_bitconfig
-		bst	temp1, 0		; BitConfig bit 0: Reverse
-		bld	flags1, REVERSE
-	; MK sends one or two bytes, if supported, and if low bits are
-	; non-zero. We store the first received byte in rx_h, second
-	; in rx_l. There are 3 low bits which are stored at the low
-	; side of the second byte, so we must shift them to line up with
-	; the high byte. The high bits become less significant, if set.
-		lsl	YL			; 00000xxxb -> 0000xxx0b
-		swap	YL			; 0000xxx0b -> xxx00000b
-		adiw	YL, 0			; 16-bit zero-test
-		breq	rc_duty_set		; Power off
-	; Scale so that YH == 247 is MAX_POWER, to support reaching full
-	; power from the highest MaxGas setting in MK-Tools. Bernhard's
-	; original version reaches full power at around 245.
-		movw	temp1, YL
-		ldi2	temp3, temp4, 0x100 * (POWER_RANGE - MIN_DUTY) / 247
-		rjmp	rc_do_scale		; The rest of the code is common
-.endif
 ;-----bko-----------------------------------------------------------------
 .if USE_UART
 evaluate_rc_uart:
@@ -2343,20 +2173,6 @@ boot_loader_jump:
 		rjmp	BOOT_START		; Jump to boot loader
 .endif
 ;-----bko-----------------------------------------------------------------
-.if USE_I2C
-i2c_init:
-		ldi	temp1, I2C_ADDR + (MOTOR_ID << 1)
-		.if defined(MK_ADDRESS_PADS)
-		sbis	PINB, adr1		; Offset MOTOR_ID by address pads
-		subi	temp1, -1
-		sbis	PINB, adr2
-		subi	temp1, -2
-		.endif
-		out	TWAR, temp1
-		outi	TWCR, (1<<TWIE)+(1<<TWEN)+(1<<TWEA)+(1<<TWINT), temp1
-		ret
-.endif
-;-----bko-----------------------------------------------------------------
 control_start:
 
 ; Check cell count
@@ -2410,7 +2226,7 @@ control_disarm:
 		outi	UCSRC, (1<<URSEL)|(1<<UCSZ1)|(1<<UCSZ0), temp1	; N81
 		.endif
 
-	; Initialize input sources (i2c and/or rc-puls)
+	; Initialize input sources (rc-puls)
 		.if USE_UART && !defined(HK_PROGRAM_CARD)
 		.equ	BAUD_RATE = 38400
 		.equ	UBRR_VAL = F_CPU / BAUD_RATE / 16 - 1
@@ -2422,9 +2238,6 @@ control_disarm:
 		sbi	UCSRA, RXC		; clear flag
 		sbi	UCSRB, RXCIE		; enable reception irq
 		.endif
-		.if USE_I2C
-		rcall	i2c_init
-		.endif
 		.if USE_INT0 || USE_ICP
 		rcp_int_rising_edge temp1
 		rcp_int_enable temp1
@@ -2433,7 +2246,7 @@ control_disarm:
 	; Wait for one of the input sources to give arming input
 
 i_rc_puls1:	clr	rc_timeout
-		cbr	flags1, (1<<EVAL_RC)+(1<<I2C_MODE)+(1<<UART_MODE)
+		cbr	flags1, (1<<EVAL_RC)+(1<<UART_MODE)
 		sts	rct_boot, ZH
 		sts	rct_beacon, ZH
 i_rc_puls2:	wdr
@@ -2461,17 +2274,13 @@ i_rc_puls_rx:	rcall	evaluate_rc_init
 		ldi	temp1, 10		; wait for this count of receiving power off
 		cp	rc_timeout, temp1
 		brlo	i_rc_puls2
-		.if USE_I2C
-		sbrs	flags1, I2C_MODE
-		out	TWCR, ZH		; Turn off I2C and interrupt
-		.endif
 		.if USE_UART
 		sbrs	flags1, UART_MODE
 		cbi	UCSRB, RXEN		; Turn off receiver
 		.endif
 		.if USE_INT0 || USE_ICP
 		mov	temp1, flags1
-		andi	temp1, (1<<I2C_MODE)+(1<<UART_MODE)
+		andi	temp1, (1<<UART_MODE)
 		breq	i_rc_puls3
 		rcp_int_disable temp1		; Turn off RC pulse interrupt
 i_rc_puls3:
@@ -2545,12 +2354,6 @@ wait_for_power_on:
 		rcall	beep_f2
 		rjmp	control_disarm		; Do not start motor until neutral signal received once again
 wait_for_power_rx:
-		.if USE_I2C
-		sbrc	flags0, EEPROM_RESET
-		rcall	eeprom_reset_block
-		sbrc	flags0, EEPROM_WRITE
-		rcall	eeprom_write_block
-		.endif
 		rcall	evaluate_rc		; Only get rc_duty, don't set duty
 		adiw	YL, 0			; Test for zero
 		breq	wait_for_power_on_init
@@ -3153,12 +2956,6 @@ clear_loop1:	cp	ZL, r0
 	; Read EEPROM block to RAM
 		rcall	eeprom_read_block	; Also calls osccal_set
 		rcall	eeprom_check_reset
-
-	; Early input initialization is required for i2c BL-Ctrl V2 detection
-	; This serves data from the EEPROM, so this is as early as possible.
-		.if USE_I2C
-		rcall	i2c_init
-		.endif
 
 	; Enable interrupts for early input (i2c)
 		sei
