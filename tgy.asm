@@ -1,46 +1,30 @@
+;--------------------------------------------------------------------------
 ;
+; simpleSimonK - main
+;
+;--------------------------------------------------------------------------
+
 ;-- Device ----------------------------------------------------------------
 ;
 .include "m8def.inc"
 ;
-; 8K Bytes of In-System Self-Programmable Flash
-; 512 Bytes EEPROM
-; 1K Byte Internal SRAM
-;
-;-- Fuses -----------------------------------------------------------------
-;
-; Old fuses for internal RC oscillator at 8MHz were lfuse=0xa4 hfuse=0xdf,
-; but since we now set OSCCAL to 0xff (about 16MHz), running under 4.5V is
-; officially out of spec. We'd better set the brown-out detection to 4.0V.
-; The resulting code works with or without external 16MHz oscillators.
-; Boards with external oscillators can use lfuse=0x3f.
-;
-; If the boot loader is enabled, the last nibble of the hfuse should be set
-; to 'a' or '2' to also enable EESAVE - save EEPROM on chip erase. This is
-; a 512-word boot flash section (0xe00), and enable BOOTRST to jump to it.
-; Setting these fuses actually has no harm even without the boot loader,
-; since 0xffff is nop, and it will just nop-sled around into normal code.
-;
-; Suggested fuses with 4.0V brown-out voltage:
-; Without external oscillator: avrdude -U lfuse:w:0x24:m -U hfuse:w:0xda:m
-;    With external oscillator: avrdude -U lfuse:w:0x3f:m -U hfuse:w:0xca:m
-;
-; Don't set WDTON if using the boot loader. We will enable it on start.
-;
+;--------------------------------------------------------------------------
+
+
 ;-- Board -----------------------------------------------------------------
 ;
-.include "afro_nfet.inc"	; AfroESC 3 with all nFETs (ICP PWM, I2C, UART)
+.include "afro_nfet.inc"	; AfroESC 3 with all nFETs (ICP PWM, UART)
 ;.include "tgy.inc"		; TowerPro/Turnigy Basic/Plush "type 2" (INT0 PWM)
+;
+;--------------------------------------------------------------------------
 
 .equ	CPU_MHZ		= F_CPU / 1000000
 
-.equ	BOOT_LOADER	= 1	; Include Turnigy USB linker STK500v2 boot loader on PWM input pin
 .equ	BOOT_JUMP	= 1	; Jump to any boot loader when PWM input stays high
 .equ	BOOT_START	= THIRDBOOTSTART
 
-.if !defined(COMP_PWM)
-.equ	COMP_PWM	= 0	; During PWM off, switch high side on (unsafe on some boards!)
-.endif
+.equ	COMP_PWM	= 1	; During PWM off, switch high side on (unsafe on some boards!)
+
 .if !defined(DEAD_LOW_NS)
 .equ	DEAD_LOW_NS	= 300	; Low-side dead time w/COMP_PWM (62.5ns steps @ 16MHz, max 2437ns)
 .equ	DEAD_HIGH_NS	= 300	; High-side dead time w/COMP_PWM (62.5ns steps @ 16MHz, max roughly PWM period)
@@ -54,8 +38,8 @@
 .if !defined(TIMING_OFFSET)
 .equ	TIMING_OFFSET	= 0	; Motor timing offset in microseconds
 .endif
-.equ	MOTOR_BRAKE	= 0	; Enable brake during neutral/idle ("motor drag" brake)
-.equ	LOW_BRAKE	= 0	; Enable brake on very short RC pulse ("thumb" brake like on Airtronics XL2P)
+.equ	MOTOR_BRAKE	= 1	; Enable brake during neutral/idle ("motor drag" brake)
+.equ	LOW_BRAKE	= 1	; Enable brake on very short RC pulse ("thumb" brake like on Airtronics XL2P)
 .if !defined(MOTOR_REVERSE)
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction
 .endif
@@ -3249,6 +3233,9 @@ init_bitbeep2:	sbrs	i_temp1, 0
 		brne	init_bitbeep2
 		rjmp	init_bitbeep1		; Loop forever
 
-.if BOOT_LOADER
+
+; -- Include Turnigy USB linker STK500v2 boot loader on PWM input pin -----
+;
 .include "boot.inc"
-.endif
+;
+;--------------------------------------------------------------------------

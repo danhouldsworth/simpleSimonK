@@ -11,17 +11,22 @@ The only ESCs it supports are :
 
 Personal views driving some of the changes :
 
-  1) I have a strong desire to avoid manual calibration, which is so cumbersome it almost takes the fun out of multi-copters. I far prefer to re-flash with absolute, known and recorded settings.
-  2) Some features (like I2C as a method of communicating to ESC's as is too slow) will not get used.
-  3) The support of dozens of boards / motor combos is distracting from being able to understand the code.
+* I have a strong desire to avoid manual calibration, which is so cumbersome it almost takes the fun out of multi-copters. I far prefer to re-flash with absolute, known and recorded settings.
+* Some features (like I2C as a method of communicating to ESC's as is too slow) will not get used.
+* The support of dozens of boards / motor combos is distracting me from being able to understand the code.
 
-That, and I'm trying to learn all this stuff, so have tinkered where appropriate...!
+That, and I'm trying to learn all this stuff, so have tinkered where appropriate (like the power on tune...!)
 
 Notes to self :
 
 * Use Sublime Text with AVR ASM to parse, and stick with tab space of 8.
 * Build tool chain AVRA and AVRDUDE are installed with homebrew.
 * AVRA 1.3.0 on OS Mavericks has issue with command on same line as labels / C debugger. Rather than reformat wholesale (this would harm readability) I've elected to complile on OSX Mountain lion until AVRA is fixed.
+
+Questions to self:
+
+1) Understand what is going on with 'Active Freewheeling', 'Regenerative Braking', 'Demag compensation'
+2) In particular, is COMP_PWM = 1, active freewheeling or regenerative braking?
 
 -----
 
