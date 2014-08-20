@@ -499,18 +499,18 @@ t1ovfl_int2:	lds	i_temp1, rct_boot
 rcp_int:
 	.if USE_ICP || USE_INT0
 		.if USE_ICP
-		in	i_temp1, ICR1L		; get captured timer values
-		in	i_temp2, ICR1H
-		in	i_sreg, TCCR1B		; abuse i_sreg to hold value
-		sbrs	i_sreg, ICES1		; evaluate edge of this interrupt
+			in	i_temp1, ICR1L		; get captured timer values
+			in	i_temp2, ICR1H
+			in	i_sreg, TCCR1B		; abuse i_sreg to hold value
+			sbrs	i_sreg, ICES1		; evaluate edge of this interrupt
 		.else
-		in	i_temp1, TCNT1L		; get timer1 values
-		in	i_temp2, TCNT1H
-		.if USE_INT0 == 1
-		sbis	PIND, rcp_in		; evaluate edge of this interrupt
-		.else
-		sbic	PIND, rcp_in		; inverted signalling
-		.endif
+			in	i_temp1, TCNT1L		; get timer1 values
+			in	i_temp2, TCNT1H
+			.if USE_INT0 == 1
+				sbis	PIND, rcp_in	; evaluate edge of this interrupt
+			.else
+				sbic	PIND, rcp_in	; inverted signalling
+			.endif
 		.endif
 		rjmp	falling_edge
 rising_edge:
@@ -844,12 +844,7 @@ evaluate_rc_init:
 		sbrc	flags1, UART_MODE
 		rjmp	evaluate_rc_uart
 		.endif
-	; Three beeps: neutral pulse received
-		rcall	wait30ms
-		rcall	beep_f3
-rc_prog_done:	rcall	eeprom_write_block
-		rjmp	puls_scale		; Calculate the new scaling factors
-		.endif
+
 ;-----bko-----------------------------------------------------------------
 ; These routines may clobber temp* and Y, but not X.
 evaluate_rc:
@@ -866,12 +861,10 @@ evaluate_rc_puls:
 		sts	brake_want, ZH
 		.endif
 		movw	temp1, rx_l		; Atomic copy of rc pulse length
-		.if defined(MIN_RC_PULS)
 		cpi2	temp1, temp2, MIN_RC_PULS, temp3
 		brcc	puls_long_enough
 		ret
 puls_long_enough:
-		.endif
 		.if LOW_BRAKE
 		lds	YL, puls_low_l		; Lowest calibrated pulse (regardless of RC_PULS_REVERSE)
 		lds	YH, puls_low_h
