@@ -10,10 +10,12 @@
 .equ	USE_UART	= 1
 .equ	USE_ICP		= 1
 
-.equ	DEAD_LOW_NS	= 300
-.equ	DEAD_HIGH_NS	= 300
+.equ	DEAD_LOW_NS	= 300	; Low-side dead time w/COMP_PWM (62.5ns steps @ 16MHz, max 2437ns)
+.equ	DEAD_HIGH_NS	= 300	; High-side dead time w/COMP_PWM (62.5ns steps @ 16MHz, max roughly PWM period)
 .equ	MOTOR_ADVANCE	= 15
-.equ	CHECK_HARDWARE	= 1
+.equ	TIMING_OFFSET	= 0	; Motor timing offset in microseconds
+
+.equ	CHECK_HARDWARE	= 1	; Check for correct pin configuration, sense inputs, and functioning MOSFETs
 
 ;*********************
 ; PORT B definitions *

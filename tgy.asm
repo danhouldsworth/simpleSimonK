@@ -25,35 +25,23 @@
 
 .equ	COMP_PWM	= 1	; During PWM off, switch high side on (unsafe on some boards!)
 
-.if !defined(DEAD_LOW_NS)
-.equ	DEAD_LOW_NS	= 300	; Low-side dead time w/COMP_PWM (62.5ns steps @ 16MHz, max 2437ns)
-.equ	DEAD_HIGH_NS	= 300	; High-side dead time w/COMP_PWM (62.5ns steps @ 16MHz, max roughly PWM period)
-.endif
 .equ	DEAD_TIME_LOW	= DEAD_LOW_NS * CPU_MHZ / 1000
 .equ	DEAD_TIME_HIGH	= DEAD_HIGH_NS * CPU_MHZ / 1000
 
-.if !defined(MOTOR_ADVANCE)
-.equ	MOTOR_ADVANCE	= 18	; Degrees of timing advance (0 - 30, 30 meaning no delay)
-.endif
-.if !defined(TIMING_OFFSET)
-.equ	TIMING_OFFSET	= 0	; Motor timing offset in microseconds
-.endif
 .equ	MOTOR_BRAKE	= 1	; Enable brake during neutral/idle ("motor drag" brake)
 .equ	LOW_BRAKE	= 1	; Enable brake on very short RC pulse ("thumb" brake like on Airtronics XL2P)
-.if !defined(MOTOR_REVERSE)
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction
-.endif
 .equ	RC_PULS_REVERSE	= 0	; Enable RC-car style forward/reverse throttle
-.equ	RC_CALIBRATION	= 1	; Support run-time calibration of min/max pulse lengths
+.equ	RC_CALIBRATION	= 0	; Support run-time calibration of min/max pulse lengths
 .equ	SLOW_THROTTLE	= 0	; Limit maximum throttle jump to try to prevent overcurrent
 .equ	BEACON		= 1	; Beep periodically when RC signal is lost
-.if !defined(CHECK_HARDWARE)
-.equ	CHECK_HARDWARE	= 0	; Check for correct pin configuration, sense inputs, and functioning MOSFETs
-.endif
+
 .equ	CELL_MAX_DV	= 43	; Maximum battery cell deciV
 .equ	CELL_MIN_DV	= 35	; Minimum battery cell deciV
+
 .equ	CELL_COUNT	= 0	; 0: auto, >0: hard-coded number of cells (for reliable LVC > ~4S)
-.equ	BLIP_CELL_COUNT	= 0	; Blip out cell count before arming
+.equ	BLIP_CELL_COUNT	= 1	; Blip out cell count before arming
+
 .equ	DEBUG_ADC_DUMP	= 0	; Output an endless loop of all ADC values (no normal operation)
 .equ	MOTOR_DEBUG	= 0	; Output sync pulses on MOSI or SCK, debug flag on MISO
 
@@ -86,14 +74,10 @@
 .equ	MAX_DRIFT_PULS	= 10	; Maximum jitter/drift microseconds during programming
 
 ; Minimum PWM on-time (too low and FETs won't turn on, hard starting)
-.if !defined(MIN_DUTY)
 .equ	MIN_DUTY	= 56 * CPU_MHZ / 16
-.endif
 
 ; Number of PWM steps (too high and PWM frequency drops into audible range)
-.if !defined(POWER_RANGE)
 .equ	POWER_RANGE	= 800 * CPU_MHZ / 16 + MIN_DUTY
-.endif
 
 .equ	MAX_POWER	= (POWER_RANGE-1)
 .equ	PWR_COOL_START	= (POWER_RANGE/24) ; Power limit while starting to reduce heating
@@ -114,9 +98,7 @@
 .equ	TIMING_MAX	= 0x00e0 ; 56us per commutation
 
 .equ	TIMEOUT_START	= 48000	; Timeout per commutation for ZC during starting
-.if !defined(START_DELAY_US)
 .equ	START_DELAY_US	= 0	; Initial post-commutation wait during starting
-.endif
 .equ	START_DSTEP_US	= 8	; Microseconds per start delay step
 .equ	START_DELAY_INC	= 15	; Wait step count increase (wraps in a byte)
 .equ	START_MOD_INC	= 4	; Start power modulation step count increase (wraps in a byte)

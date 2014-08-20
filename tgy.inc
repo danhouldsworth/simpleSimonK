@@ -1,11 +1,8 @@
 ;***********************************************************
 ;* TowerPro 18A / Turnigy Plush 18A/25A "type 2" boards    *
 ;* with pFETs on PORTD, nFETs on PORTB                     *
-;* based on tp-18a from Bernhard's 18a_tpro_ppm_r05.zip    *
-;* Mai.2007                                                *
-;* http://home.versanet.de/~b-konze/                       *
-;* http://home.versanet.de/~b-konze/blc_18a/blc_18a.htm    *
 ;***********************************************************
+
 
 .equ	F_CPU		= 16000000
 .equ	USE_INT0	= 1
@@ -15,6 +12,10 @@
 
 .equ    DEAD_LOW_NS     = 450	; May work on some boards, but be careful!
 .equ    DEAD_HIGH_NS    = 8000
+.equ	MOTOR_ADVANCE	= 18	; Degrees of timing advance (0 - 30, 30 meaning no delay)
+.equ	TIMING_OFFSET	= 0	; Motor timing offset in microseconds
+
+.equ	CHECK_HARDWARE	= 0	; Check for correct pin configuration, sense inputs, and functioning MOSFETs
 
 ;*********************
 ; PORT D definitions *
