@@ -25,8 +25,12 @@ Notes to self :
 
 Questions to self:
 
-1. Understand what is going on with 'Active Freewheeling', 'Regenerative Braking', 'Demag compensation'
-2. In particular, is COMP_PWM = 1, active freewheeling or regenerative braking?
+1. Understand the underlying mechanics / electronics of 'Active Freewheeling', 'Regenerative Braking', 'Demag compensation' and whether setting COMP_PWM = 1 is a true implementation of either?
+
+Non-exhaustive list of concepts learned :
+
+* Active Freewheeling (aka Synchronous Rectification) - uses MOSFET (very low resistance) rather than diode (~0.7v drop) during undriven phase of PWM duty cycle. Saves energy in low duty cycle throttle settings.
+* Regenerative Braking. Effectively shorts one or more of the DrivenHigh, DrivenLow and Comparator phases. Rotational energy is converted into current flowing in that phase, but as far as I can tell *is not* recaptured by the LiPo or ESC caps. I need to look further as to whether the current induces current in the next phase and *saves* the battery from powering the next commutation but this seems unlikely.
 
 -----
 

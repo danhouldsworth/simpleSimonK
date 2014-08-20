@@ -2,7 +2,7 @@
 ;***** Created: 2011-08-25 21:00 ******* Source: ATmega8.xml *************
 ;*************************************************************************
 ;* A P P L I C A T I O N   N O T E   F O R   T H E   A V R   F A M I L Y
-;* 
+;*
 ;* Number            : AVR000
 ;* File Name         : "m8def.inc"
 ;* Title             : Register/Bit Definitions for the ATmega8
@@ -10,27 +10,27 @@
 ;* Version           : 2.35
 ;* Support E-mail    : avr@atmel.com
 ;* Target MCU        : ATmega8
-;* 
+;*
 ;* DESCRIPTION
-;* When including this file in the assembly program file, all I/O register 
+;* When including this file in the assembly program file, all I/O register
 ;* names and I/O register bit names appearing in the data book can be used.
-;* In addition, the six registers forming the three data pointers X, Y and 
-;* Z have been assigned names XL - ZH. Highest RAM address for Internal 
-;* SRAM is also defined 
-;* 
+;* In addition, the six registers forming the three data pointers X, Y and
+;* Z have been assigned names XL - ZH. Highest RAM address for Internal
+;* SRAM is also defined
+;*
 ;* The Register names are represented by their hexadecimal address.
-;* 
+;*
 ;* The Register Bit names are represented by their bit number (0-7).
-;* 
+;*
 ;* Please observe the difference in using the bit names with instructions
 ;* such as "sbr"/"cbr" (set/clear bit in register) and "sbrs"/"sbrc"
 ;* (skip if bit in register set/cleared). The following example illustrates
 ;* this:
-;* 
+;*
 ;* in    r16,PORTB             ;read PORTB latch
 ;* sbr   r16,(1<<PB6)+(1<<PB5) ;set PB6 and PB5 (use masks, not bit#)
 ;* out   PORTB,r16             ;output to PORTB
-;* 
+;*
 ;* in    r16,TIFR              ;read the Timer Interrupt Flag Register
 ;* sbrc  r16,TOV0              ;test the overflow flag (use bit#)
 ;* rjmp  TOV0_is_set           ;jump if set
@@ -345,14 +345,14 @@
 ; ***** TWI **************************
 ; TWBR - TWI Bit Rate register
 .equ	I2BR	= TWBR	; For compatibility
-.equ	TWBR0	= 0	; 
-.equ	TWBR1	= 1	; 
-.equ	TWBR2	= 2	; 
-.equ	TWBR3	= 3	; 
-.equ	TWBR4	= 4	; 
-.equ	TWBR5	= 5	; 
-.equ	TWBR6	= 6	; 
-.equ	TWBR7	= 7	; 
+.equ	TWBR0	= 0	;
+.equ	TWBR1	= 1	;
+.equ	TWBR2	= 2	;
+.equ	TWBR3	= 3	;
+.equ	TWBR4	= 4	;
+.equ	TWBR5	= 5	;
+.equ	TWBR6	= 6	;
+.equ	TWBR7	= 7	;
 
 ; TWCR - TWI Control Register
 .equ	I2CR	= TWCR	; For compatibility
@@ -712,21 +712,21 @@
 ; ***** INTERRUPT VECTORS ************************************************
 .equ	INT0addr	= 0x0001	; External Interrupt Request 0
 .equ	INT1addr	= 0x0002	; External Interrupt Request 1
-.equ	OC2addr	= 0x0003	; Timer/Counter2 Compare Match
+.equ	OC2addr		= 0x0003	; Timer/Counter2 Compare Match
 .equ	OVF2addr	= 0x0004	; Timer/Counter2 Overflow
 .equ	ICP1addr	= 0x0005	; Timer/Counter1 Capture Event
 .equ	OC1Aaddr	= 0x0006	; Timer/Counter1 Compare Match A
 .equ	OC1Baddr	= 0x0007	; Timer/Counter1 Compare Match B
 .equ	OVF1addr	= 0x0008	; Timer/Counter1 Overflow
 .equ	OVF0addr	= 0x0009	; Timer/Counter0 Overflow
-.equ	SPIaddr	= 0x000a	; Serial Transfer Complete
+.equ	SPIaddr		= 0x000a	; Serial Transfer Complete
 .equ	URXCaddr	= 0x000b	; USART, Rx Complete
 .equ	UDREaddr	= 0x000c	; USART Data Register Empty
 .equ	UTXCaddr	= 0x000d	; USART, Tx Complete
 .equ	ADCCaddr	= 0x000e	; ADC Conversion Complete
 .equ	ERDYaddr	= 0x000f	; EEPROM Ready
-.equ	ACIaddr	= 0x0010	; Analog Comparator
-.equ	TWIaddr	= 0x0011	; 2-wire Serial Interface
+.equ	ACIaddr		= 0x0010	; Analog Comparator
+.equ	TWIaddr		= 0x0011	; 2-wire Serial Interface
 .equ	SPMRaddr	= 0x0012	; Store Program Memory Ready
 
 .equ	INT_VECTORS_SIZE	= 19	; size in words
