@@ -27,7 +27,7 @@ That, and I'm trying to learn all this stuff, so have tinkered where appropriate
 ### Questions to self:
 
 1. Understand the underlying mechanics / electronics of 'Active Freewheeling', 'Regenerative Braking', 'Demag compensation' and whether setting COMP_PWM = 1 is a true implementation of either?
-2. Understand response times (such as those measured by http://owenduffy.net/blog/?p=1439), and a suitable measurement / metric. Ie. timing from i) the initiation of signal from FC loop, ii) the sending of signal from FC board, iii) the receipt of signal at ESC, iv) the parsing of signal at ESC.... and measurement to i) current draw, ii) rpm. [Obviously the most useful metric is FC loop to rpm, but this is effected by choice of PWM / I2C speed etc]
+2. Understand response times (such as those measured by http://owenduffy.net/blog/?p=1439 or http://www.rcgroups.com/forums/showthread.php?t=1250488&page=2), and a suitable measurement / metric. Ie. timing from i) the initiation of signal from FC loop, ii) the sending of signal from FC board, iii) the receipt of signal at ESC, iv) the parsing of signal at ESC.... and measurement to i) current draw, ii) rpm. [Obviously the most useful metric is FC loop to rpm, but this is effected by choice of PWM / I2C speed etc]
 
 ### Non-exhaustive list of concepts learned :
 
