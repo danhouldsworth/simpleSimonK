@@ -22,7 +22,6 @@
 .equ	DEAD_TIME_HIGH	= DEAD_HIGH_NS * CPU_MHZ / 1000
 
 .equ	MOTOR_BRAKE	= 1	; Enable brake during neutral/idle ("motor drag" brake)
-.equ	LOW_BRAKE	= 1	; Enable brake on very short RC pulse ("thumb" brake like on Airtronics XL2P)
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction
 .equ	RC_PULS_REVERSE	= 0	; Enable RC-car style forward/reverse throttle
 
@@ -51,10 +50,6 @@
 .equ	PROGRAM_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS) / 2	; Normally 1460
 .endif
 
-.if	LOW_BRAKE
-.equ	RCP_LOW_DBAND	= 60	; Brake at this many microseconds below low pulse
-.endif
-
 .equ	MAX_DRIFT_PULS	= 10	; Maximum jitter/drift microseconds during programming
 
 ; Minimum PWM on-time (too low and FETs won't turn on, hard starting)
@@ -72,8 +67,6 @@
 
 .equ	BRAKE_POWER	= MAX_POWER*2/3	; Brake force is exponential, so start fairly high
 .equ	BRAKE_SPEED	= 3		; Speed to reach MAX_POWER, 0 (slowest) - 8 (fastest)
-.equ	LOW_BRAKE_POWER	= MAX_POWER*2/3
-.equ	LOW_BRAKE_SPEED	= 5
 
 .equ	TIMING_MIN	= 0x8000 ; 8192us per commutation
 .equ	TIMING_RANGE1	= 0x4000 ; 4096us per commutation
@@ -298,7 +291,7 @@ defaults_w:
 ; pwm_*_high and pwm_again are called when the particular on/off cycle
 ; is longer than will fit in 8 bits. This is tracked in tcnt2h.
 
-.if MOTOR_BRAKE || LOW_BRAKE
+.if MOTOR_BRAKE
 pwm_brake_on:
 		cpse	tcnt2h, ZH
 		rjmp	pwm_again
@@ -655,7 +648,7 @@ wait3:		in	temp1, TIFR
 		brne	wait1
 wait_ret:	ret
 
-;-- RAM functions -------------------------------------------------------
+;-- RAM functions -----------------------------------------------
 ; Interrupts must be disabled to avoid Z conflicts and content changes.
 set_defaults_to_RAM:
 		ldi2	YL, YH, RAM_sig_l
@@ -789,7 +782,7 @@ evaluate_rc:
 .if USE_ICP || USE_INT0
 evaluate_rc_puls:
 		cbr	flags1, (1<<EVAL_RC)+(1<<REVERSE)
-		.if MOTOR_BRAKE || LOW_BRAKE
+		.if MOTOR_BRAKE
 		sts	brake_want, ZH
 		.endif
 		movw	temp1, rx_l		; Atomic copy of rc pulse length
@@ -797,19 +790,6 @@ evaluate_rc_puls:
 		brcc	puls_long_enough
 		ret
 puls_long_enough:
-		.if LOW_BRAKE
-		lds	YL, puls_low_l		; Lowest calibrated pulse (regardless of RC_PULS_REVERSE)
-		lds	YH, puls_low_h
-		sbiwx	YL, YH, RCP_LOW_DBAND * CPU_MHZ
-		brcs	puls_not_low_brake
-		cp	temp1, YL
-		cpc	temp2, YH
-		brcc	puls_not_low_brake
-		ldi	YL, 2
-		sts	brake_want, YL		; Set desired brake to 2 (low brake)
-		rjmp	puls_zero
-puls_not_low_brake:
-		.endif
 		lds	YL, neutral_l
 		lds	YH, neutral_h
 		sub	temp1, YL		; Offset input to neutral
@@ -1394,7 +1374,7 @@ i_rc_puls3:
 restart_control:
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
 		cbr	flags0, (1<<SET_DUTY)	; Do not yet set duty on input
-		.if MOTOR_BRAKE || LOW_BRAKE
+		.if MOTOR_BRAKE
 		sts	brake_active, ZH	; No active brake
 		.endif
 		GRN_on				; Green on while armed and idle or braking
@@ -1403,7 +1383,7 @@ wait_for_power_on_init:
 		sts	rct_boot, ZH
 		sts	rct_beacon, ZH
 
-		.if MOTOR_BRAKE || LOW_BRAKE
+		.if MOTOR_BRAKE
 		lds	temp3, brake_want
 		lds	temp4, brake_active
 		cp	temp3, temp4
@@ -1412,18 +1392,9 @@ wait_for_power_on_init:
 		rcall	switch_power_off	; Disable any active brake
 		sts	brake_active, temp3	; Set new brake_active to brake_want
 
-		cpi	temp3, 1		; Neutral brake
-		brne	set_brake1
 		ldi	YL, 1 << BRAKE_SPEED
 		sts	brake_sub, YL
 		ldi2	YL, YH, BRAKE_POWER
-		rjmp	set_brake_duty
-
-set_brake1:	cpi	temp3, 2		; Thumb brake
-		brne	wait_for_power_on
-		ldi	YL, 1 << LOW_BRAKE_SPEED
-		sts	brake_sub, YL
-		ldi2	YL, YH, LOW_BRAKE_POWER
 
 set_brake_duty:	ldi2	temp1, temp2, MAX_POWER
 		sub	temp1, YL		; Calculate OFF duty
@@ -1525,7 +1496,7 @@ run_reverse:	rcall	wait_for_low
 		com2com1
 
 run6:
-		.if MOTOR_BRAKE || LOW_BRAKE
+		.if MOTOR_BRAKE
 		lds	temp1, brake_want
 		cpse	temp1, ZH
 		rjmp	run_to_brake
