@@ -658,6 +658,67 @@ wait3:		in	temp1, TIFR
 		brne	wait1
 wait_ret:	ret
 
+;-- EEPROM functions -----------------------------------------------------
+; Interrupts must be disabled to avoid Z conflicts and content changes.
+eeprom_check_reset:
+	; Check EEPROM signature
+		lds	temp1, eeprom_sig_l
+		lds	temp2, eeprom_sig_h
+		subi	temp1, low(EEPROM_SIGN)
+		sbci	temp2, high(EEPROM_SIGN)
+		breq	eeprom_good
+
+	; Signature not good: set defaults in RAM, but do not write
+	; to the EEPROM until we actually set something non-default
+eeprom_reset1:	ldi2	YL, YH, eeprom_sig_l
+		ldi	ZL, low(eeprom_defaults_w << 1)
+eeprom_reset2:	lpm	temp1, Z+
+		st	Y+, temp1
+		cpi	YL, low(eeprom_end)
+		brne	eeprom_reset2
+eeprom_good:	ret
+
+
+;-----bko-----------------------------------------------------------------
+; Read from or write to the EEPROM block. To avoid duplication, we use the
+; global interrupts flag (I) to enable writing versus reading mde. Only
+; changed bytes are written. We restore OSCCAL to the boot-time value as
+; the EEPROM timing is affected by it. We always return by falling through
+; to osccal_set.
+eeprom_read_block:				; When interrupts disabled
+eeprom_write_block:				; When interrupts enabled
+		lds	temp1, orig_osccal
+		out	OSCCAL, temp1
+		cbr	flags0, (1<<EEPROM_WRITE)
+		ldi2	YL, YH, eeprom_sig_l
+		ldi2	temp1, temp2, EEPROM_OFFSET
+eeprom_rw1:	wdr
+		sbic	EECR, EEWE
+		rjmp	eeprom_rw1		; Loop while writing EEPROM
+		in	temp3, SPMCR
+		sbrc	temp3, SPMEN
+		rjmp	eeprom_rw1		; Loop while flashing
+		cpi	YL, low(eeprom_end)
+		breq	eeprom_rw4
+		out	EEARH, temp2
+		out	EEARL, temp1
+		adiw	temp1, 1
+		sbi	EECR, EERE		; Read existing EEPROM byte
+		in	temp3, EEDR
+		brie	eeprom_rw2
+		st	Y+, temp3		; Store the byte to RAM
+		rjmp	eeprom_rw1
+eeprom_rw2:	ld	temp4, Y+		; Compare with the byte in RAM
+		out	EEDR, temp4
+		cli
+		sbi	EECR, EEMWE
+		cpse	temp3, temp4
+		sbi	EECR, EEWE
+		sei
+		rjmp	eeprom_rw1
+eeprom_rw4:	rcall	wait30ms
+		; Fall through to set the oscillator calibration
+
 ;-----bko-----------------------------------------------------------------
 ; Set the oscillator calibration for 8MHz operation, or set it to 0xff for
 ; approximately 16MHz operation even without an external oscillator. This
@@ -1875,8 +1936,9 @@ clear_loop1:	cp	ZL, r0
 	; (with 64ms delayed start fuses) for i2c V2 protocol detection
 		rcall	wait30ms		; Running at unadjusted speed(!)
 
-	; Set the Oscillator
-		rcall 	osccal_set
+	; EEPROM (fall throught to Set the Oscillator)
+		rcall eeprom_read_block
+		rcall eeprom_check_reset
 
 	; Enable interrupts for early input (i2c)
 		sei
