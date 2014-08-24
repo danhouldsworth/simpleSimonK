@@ -23,7 +23,6 @@
 
 .equ	MOTOR_BRAKE	= 1	; Enable brake during neutral/idle ("motor drag" brake)
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction
-.equ	RC_PULS_REVERSE	= 0	; Enable RC-car style forward/reverse throttle
 
 .equ	BEACON		= 1	; Beep periodically when RC signal is lost
 
@@ -40,15 +39,10 @@
 .equ	FULL_RC_PULS	= 1860	; Full speed at or above this pulse length
 .equ	MAX_RC_PULS	= 2400	; Throw away any pulses longer than this
 .equ	MIN_RC_PULS	= 100	; Throw away any pulses shorter than this
-.equ	MID_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS) / 2	; Neutral when RC_PULS_REVERSE = 1
+.equ	MID_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS) / 2
 
-.if	RC_PULS_REVERSE
-.equ	RCP_DEADBAND	= 50	; Do not start until this much above or below neutral
-.equ	PROGRAM_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS * 3) / 4	; Normally 1660
-.else
-.equ	RCP_DEADBAND	= 0
+.equ	RCP_DEADBAND	= 0 	; Do not start until this much above or below neutral
 .equ	PROGRAM_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS) / 2	; Normally 1460
-.endif
 
 .equ	MAX_DRIFT_PULS	= 10	; Maximum jitter/drift microseconds during programming
 
@@ -795,15 +789,6 @@ puls_long_enough:
 		sub	temp1, YL		; Offset input to neutral
 		sbc	temp2, YH
 		brcc	puls_plus
-		.if RC_PULS_REVERSE
-		sbr	flags1, (1<<REVERSE)
-		com	temp2			; Negate 16-bit value to get positive duty cycle
-		neg	temp1
-		sbci	temp2, -1
-		lds	temp3, rev_scale_l	; Load reverse scaling factor
-		lds	temp4, rev_scale_h
-		rjmp	puls_not_zero
-		.endif
 		; Fall through to stop/zero in no reverse case
 puls_zero_brake:
 		.if MOTOR_BRAKE
@@ -856,13 +841,8 @@ evaluate_rc_uart:
 ; Calculate the neutral offset and forward (and reverse) scaling factors
 ; to line up with the high/low (and neutral) pulse lengths.
 puls_scale:
-		.if RC_PULS_REVERSE
-		lds	temp1, puls_neutral_l
-		lds	temp2, puls_neutral_h
-		.else
 		lds	temp1, puls_low_l
 		lds	temp2, puls_low_h
-		.endif
 		sts	neutral_l, temp1
 		sts	neutral_h, temp2
 	; Find the distance to full throttle and fit it to match the
@@ -875,17 +855,6 @@ puls_scale:
 		rcall	puls_find_multiplicand
 		sts	fwd_scale_l, temp1
 		sts	fwd_scale_h, temp2
-		.if RC_PULS_REVERSE
-		lds	temp3, puls_neutral_l
-		lds	temp4, puls_neutral_h
-		lds	temp1, puls_low_l
-		lds	temp2, puls_low_h
-		sub	temp3, temp1
-		sbc	temp4, temp2
-		rcall	puls_find_multiplicand
-		sts	rev_scale_l, temp1
-		sts	rev_scale_h, temp2
-		.endif
 		ret
 ;-----bko-----------------------------------------------------------------
 ; Find the lowest 16.16 multiplicand that brings us to full throttle
