@@ -60,7 +60,7 @@
 .equ	PWR_MAX_RPM2	= (POWER_RANGE/2) ; Power limit when running slower than TIMING_RANGE2
 
 .equ	BRAKE_POWER	= MAX_POWER*2/3	; Brake force is exponential, so start fairly high
-.equ	BRAKE_SPEED	= 3		; Speed to reach MAX_POWER, 0 (slowest) - 8 (fastest)
+.equ	BRAKE_SPEED	= 8		; Speed to reach MAX_POWER, 0 (slowest) - 8 (fastest)
 
 .equ	TIMING_MIN	= 0x8000 ; 8192us per commutation
 .equ	TIMING_RANGE1	= 0x4000 ; 4096us per commutation
@@ -1365,7 +1365,8 @@ wait_for_power_on_init:
 		sts	brake_sub, YL
 		ldi2	YL, YH, BRAKE_POWER
 
-set_brake_duty:	ldi2	temp1, temp2, MAX_POWER
+		;set_brake_duty
+		ldi2	temp1, temp2, MAX_POWER
 		sub	temp1, YL		; Calculate OFF duty
 		sbc	temp2, YH
 		rcall	set_new_duty_set
