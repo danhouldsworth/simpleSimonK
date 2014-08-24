@@ -256,7 +256,7 @@ defaults_w:
 
 ;-- Instruction extension macros -----------------------------------------
 ;
-.include "macros.inc"
+.include "libraries/macros.inc"
 ;
 ;--------------------------------------------------------------------------
 
@@ -690,7 +690,7 @@ mul_y_12x34:
 
 ;-- Hardware diagnostics -------------------------------------------------
 ;
-.include "hardware_diagnostics.inc"
+.include "libraries/hardware_diagnostics.inc"
 ;
 ;-------------------------------------------------------------------------
 
@@ -1889,6 +1889,6 @@ init_bitbeep2:	sbrs	i_temp1, 0
 
 ; -- Include Turnigy USB linker STK500v2 boot loader on PWM input pin -----
 ;
-.include "boot.inc"
+.include "libraries/boot.inc"
 ;
 ;--------------------------------------------------------------------------

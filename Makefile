@@ -12,7 +12,7 @@ ALL_TARGETS = afro_nfet.hex tgy.hex
 
 all: $(ALL_TARGETS)
 
-$(ALL_TARGETS): main.asm boot.inc macros.inc hardware_diagnostics.inc
+$(ALL_TARGETS): main.asm
 
 .inc.hex:
 	@test -e $*.asm || ln -s main.asm $*.asm
