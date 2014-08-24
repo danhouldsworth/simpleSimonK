@@ -98,9 +98,6 @@
 .equ	T1CLK		= (1<<CS10)+(USE_ICP<<ICES1)+(USE_ICP<<ICNC1)	; clk/1 == 16MHz
 .equ	T2CLK		= (1<<CS20)	; clk/1 == 16MHz
 
-.equ	EEPROM_SIGN	= 31337		; Random 16-bit value
-.equ	EEPROM_OFFSET	= 0x80		; Offset into 512-byte space (why not)
-
 ; Conditional code inclusion
 .set	ADC_READ_NEEDED	= 0		; Reading from ADCs
 
@@ -127,8 +124,8 @@
 	.equ	SET_DUTY	= 1	; if set when armed, set duty during evaluate_rc
 ;	.equ	I_pFET_HIGH	= 2	; set if over-current detect
 ;	.equ	GET_STATE	= 3	; set if state is to be send
-	.equ	EEPROM_RESET	= 4	; if set, reset EEPROM
-	.equ	EEPROM_WRITE	= 5	; if set, save settings to EEPROM
+;	.equ	EEPROM_RESET	= 4	; if set, reset EEPROM
+;	.equ	EEPROM_WRITE	= 5	; if set, save settings to EEPROM
 	.equ	UART_SYNC	= 6	; if set, we are waiting for our serial throttle byte
 	.equ	NO_CALIBRATION	= 7	; if set, disallow calibration (unsafe reset cause)
 .def	flags1		= r17	; state flags
@@ -202,16 +199,16 @@ brake_sub:	.byte	1	; Brake speed subtrahend (power of two)
 brake_want:	.byte	1	; Type of brake desired
 brake_active:	.byte	1	; Type of brake active
 ;**** **** **** **** ****
-; The following entries are block-copied from/to EEPROM
-eeprom_sig_l:	.byte	1
-eeprom_sig_h:	.byte	1
+; The following entries are RAM settings (previously block-copied from/to EEPROM)
+RAM_sig_l:	.byte	1
+RAM_sig_h:	.byte	1
 puls_high_l:	.byte	1	; -,
 puls_high_h:	.byte	1	;  |
 puls_low_l:	.byte	1	;  |- saved pulse lengths during throttle calibration
 puls_low_h:	.byte	1	;  |  (order used by rc_prog)
 puls_neutral_l:	.byte	1	;  |
 puls_neutral_h:	.byte	1	; -'
-eeprom_end:	.byte	1
+RAM_end:	.byte	1
 ;-----bko-----------------------------------------------------------------
 ;**** **** **** **** ****
 .cseg
@@ -263,8 +260,8 @@ eeprom_end:	.byte	1
 		reti 	 	; twi_int	TWIaddr =$011	; Irq. vector address for Two-Wire Inter
 		reti		; spmc_int	SPMaddr =$012	; SPM complete Interrupt Vector Address
 
-eeprom_defaults_w:
-	.db low(EEPROM_SIGN), high(EEPROM_SIGN)
+defaults_w:
+	.db 0x00,0x00
 	.db byte1(FULL_RC_PULS * CPU_MHZ), byte2(FULL_RC_PULS * CPU_MHZ)
 	.db byte1(STOP_RC_PULS * CPU_MHZ), byte2(STOP_RC_PULS * CPU_MHZ)
 	.db byte1(MID_RC_PULS * CPU_MHZ), byte2(MID_RC_PULS * CPU_MHZ)
@@ -658,66 +655,16 @@ wait3:		in	temp1, TIFR
 		brne	wait1
 wait_ret:	ret
 
-;-- EEPROM functions -----------------------------------------------------
+;-- RAM functions -------------------------------------------------------
 ; Interrupts must be disabled to avoid Z conflicts and content changes.
-eeprom_check_reset:
-	; Check EEPROM signature
-		lds	temp1, eeprom_sig_l
-		lds	temp2, eeprom_sig_h
-		subi	temp1, low(EEPROM_SIGN)
-		sbci	temp2, high(EEPROM_SIGN)
-		breq	eeprom_good
-
-	; Signature not good: set defaults in RAM, but do not write
-	; to the EEPROM until we actually set something non-default
-eeprom_reset1:	ldi2	YL, YH, eeprom_sig_l
-		ldi	ZL, low(eeprom_defaults_w << 1)
-eeprom_reset2:	lpm	temp1, Z+
+set_defaults_to_RAM:
+		ldi2	YL, YH, RAM_sig_l
+		ldi	ZL, low(defaults_w << 1)
+RAM_copy_loop1:	lpm	temp1, Z+
 		st	Y+, temp1
-		cpi	YL, low(eeprom_end)
-		brne	eeprom_reset2
-eeprom_good:	ret
-
-
-;-----bko-----------------------------------------------------------------
-; Read from or write to the EEPROM block. To avoid duplication, we use the
-; global interrupts flag (I) to enable writing versus reading mde. Only
-; changed bytes are written. We restore OSCCAL to the boot-time value as
-; the EEPROM timing is affected by it. We always return by falling through
-; to osccal_set.
-eeprom_read_block:				; When interrupts disabled
-eeprom_write_block:				; When interrupts enabled
-		lds	temp1, orig_osccal
-		out	OSCCAL, temp1
-		cbr	flags0, (1<<EEPROM_WRITE)
-		ldi2	YL, YH, eeprom_sig_l
-		ldi2	temp1, temp2, EEPROM_OFFSET
-eeprom_rw1:	wdr
-		sbic	EECR, EEWE
-		rjmp	eeprom_rw1		; Loop while writing EEPROM
-		in	temp3, SPMCR
-		sbrc	temp3, SPMEN
-		rjmp	eeprom_rw1		; Loop while flashing
-		cpi	YL, low(eeprom_end)
-		breq	eeprom_rw4
-		out	EEARH, temp2
-		out	EEARL, temp1
-		adiw	temp1, 1
-		sbi	EECR, EERE		; Read existing EEPROM byte
-		in	temp3, EEDR
-		brie	eeprom_rw2
-		st	Y+, temp3		; Store the byte to RAM
-		rjmp	eeprom_rw1
-eeprom_rw2:	ld	temp4, Y+		; Compare with the byte in RAM
-		out	EEDR, temp4
-		cli
-		sbi	EECR, EEMWE
-		cpse	temp3, temp4
-		sbi	EECR, EEWE
-		sei
-		rjmp	eeprom_rw1
-eeprom_rw4:	rcall	wait30ms
-		; Fall through to set the oscillator calibration
+		cpi	YL, low(RAM_end)
+		brne	RAM_copy_loop1
+		ret
 
 ;-----bko-----------------------------------------------------------------
 ; Set the oscillator calibration for 8MHz operation, or set it to 0xff for
@@ -1936,9 +1883,11 @@ clear_loop1:	cp	ZL, r0
 	; (with 64ms delayed start fuses) for i2c V2 protocol detection
 		rcall	wait30ms		; Running at unadjusted speed(!)
 
-	; EEPROM (fall throught to Set the Oscillator)
-		rcall eeprom_read_block
-		rcall eeprom_check_reset
+	; Set the Oscillator
+		rcall osccal_set
+
+	; Copy the default settings (stored as double-bytes to RAM)
+		rcall set_defaults_to_RAM
 
 	; Enable interrupts for early input (i2c)
 		sei
