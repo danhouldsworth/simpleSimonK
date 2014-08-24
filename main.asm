@@ -11,28 +11,21 @@
 ;
 ;--------------------------------------------------------------------------
 
-.equ	CPU_MHZ		= F_CPU / 1000000
+.equ	MOTOR_ID	= 1	; MK-style I2C motor ID, or UART motor number
 
 .equ	BOOT_JUMP	= 1	; Jump to any boot loader when PWM input stays high
 .equ	BOOT_START	= THIRDBOOTSTART
 
 .equ	COMP_PWM	= 1	; During PWM off, switch high side on (unsafe on some boards!)
-
-.equ	DEAD_TIME_LOW	= DEAD_LOW_NS * CPU_MHZ / 1000
-.equ	DEAD_TIME_HIGH	= DEAD_HIGH_NS * CPU_MHZ / 1000
-
 .equ	MOTOR_BRAKE	= 1	; Enable brake during neutral/idle ("motor drag" brake)
-.equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction
+.equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
 
 .equ	BEACON		= 1	; Beep periodically when RC signal is lost
+.equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 
 .equ	CELL_MAX_DV	= 43	; Maximum battery cell deciV
 .equ	CELL_COUNT	= 0	; 0: auto, >0: hard-coded number of cells (for reliable LVC > ~4S)
 .equ	BLIP_CELL_COUNT	= 1	; Blip out cell count before arming
-
-.equ	MOTOR_ID	= 1	; MK-style I2C motor ID, or UART motor number
-
-.equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 
 ; These might be a bit wide for most radios, but lines up with POWER_RANGE.
 .equ	STOP_RC_PULS	= 1060	; Stop motor at or below this pulse length
@@ -41,10 +34,9 @@
 .equ	MIN_RC_PULS	= 100	; Throw away any pulses shorter than this
 .equ	MID_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS) / 2
 
-.equ	RCP_DEADBAND	= 0 	; Do not start until this much above or below neutral
-.equ	PROGRAM_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS) / 2	; Normally 1460
-
-.equ	MAX_DRIFT_PULS	= 10	; Maximum jitter/drift microseconds during programming
+.equ	CPU_MHZ		= F_CPU / 1000000
+.equ	DEAD_TIME_LOW	= DEAD_LOW_NS * CPU_MHZ / 1000
+.equ	DEAD_TIME_HIGH	= DEAD_HIGH_NS * CPU_MHZ / 1000
 
 ; Minimum PWM on-time (too low and FETs won't turn on, hard starting)
 .equ	MIN_DUTY	= 56 * CPU_MHZ / 16
@@ -57,14 +49,14 @@
 .equ	PWR_MIN_START	= (POWER_RANGE/6) ; Power limit while starting (to start)
 .equ	PWR_MAX_START	= (POWER_RANGE/4) ; Power limit while starting (if still not running)
 .equ	PWR_MAX_RPM1	= (POWER_RANGE/4) ; Power limit when running slower than TIMING_RANGE1
-.equ	PWR_MAX_RPM2	= (POWER_RANGE/2) ; Power limit when running slower than TIMING_RANGE2
+;.equ	PWR_MAX_RPM2	= (POWER_RANGE/2) ; Power limit when running slower than TIMING_RANGE2
 
 .equ	BRAKE_POWER	= MAX_POWER*2/3	; Brake force is exponential, so start fairly high
 .equ	BRAKE_SPEED	= 8		; Speed to reach MAX_POWER, 0 (slowest) - 8 (fastest)
 
-.equ	TIMING_MIN	= 0x8000 ; 8192us per commutation
-.equ	TIMING_RANGE1	= 0x4000 ; 4096us per commutation
-.equ	TIMING_RANGE2	= 0x2000 ; 2048us per commutation
+;.equ	TIMING_MIN	= 0x8000 ; 8192us per commutation
+;.equ	TIMING_RANGE1	= 0x4000 ; 4096us per commutation
+;.equ	TIMING_RANGE2	= 0x2000 ; 2048us per commutation
 .equ	TIMING_RANGE3	= 0x1000 ; 1024us per commutation
 .equ	TIMING_MAX	= 0x00e0 ; 56us per commutation
 
@@ -518,9 +510,6 @@ falling_edge:
 		sbi2	i_temp1, i_temp2, MAX_RC_PULS * CPU_MHZ	; Put back to start time
 		sub	rx_l, i_temp1		; Subtract start time from current time
 		sbc	rx_h, i_temp2
-		.if MAX_RC_PULS * CPU_MHZ > 0xffff
-		.error "MAX_RC_PULS * CPU_MHZ too big to fit in two bytes -- adjust it or the rcp_int code"
-		.endif
 		sbr	flags1, (1<<EVAL_RC)
 rcpint_exit:	rcp_int_rising_edge i_temp1	; Set next int to rising edge
 		out	SREG, i_sreg
@@ -748,9 +737,6 @@ adc_wait:	sbic	ADCSRA, ADSC
 
 ;-----bko-----------------------------------------------------------------
 ; Unlike the normal evaluate_rc, we look here for programming mode (pulses
-; above PROGRAM_RC_PULS), unless we have received UART input.
-;
-; With pulse width modulation (PWM) input, we have to be careful about
 ; oscillator drift. If we are running on a board without an external
 ; crystal/resonator/oscillator, the internal RC oscillator must be used,
 ; which can drift significantly with temperature and voltage. So, we must
@@ -801,11 +787,6 @@ puls_zero:	clr	YL
 puls_plus:
 		lds	temp3, fwd_scale_l	; Load forward scaling factor
 		lds	temp4, fwd_scale_h
-puls_not_zero:
-		.if RCP_DEADBAND
-		sbiwx	temp1, temp2, RCP_DEADBAND * CPU_MHZ
-		brmi	puls_zero_brake
-		.endif
 .endif
 	; The following is used by all input modes
 rc_do_scale:	ldi2	YL, YH, MIN_DUTY	; Offset result so that 0 is MIN_DUTY
@@ -864,9 +845,6 @@ puls_scale:
 ; If the input range is < 100us at 8MHz, < 50us at 16MHz, we return
 ; too low a multiplicand (higher won't fit in 16 bits).
 puls_find_multiplicand:
-		.if RCP_DEADBAND
-		sbi2	temp3, temp4, RCP_DEADBAND * CPU_MHZ
-		.endif
 		ldi2	temp1, temp2, (POWER_RANGE - MIN_DUTY) * 65536 / MAX_RC_PULS / CPU_MHZ
 puls_find1:	adiw	temp1, 1
 		wdr
