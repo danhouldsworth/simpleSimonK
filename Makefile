@@ -15,6 +15,13 @@ all: $(ALL_TARGETS)
 $(ALL_TARGETS): main.asm
 
 .inc.hex:
+	#********************************************************************************************
+	#                                                                                           *
+	#                                                                                           *
+	# Warning : this will not make using AVRA on OS X Mavericks, use OS X Mountain Lion instead *
+	#                                                                                           *
+	#                                                                                           *
+	#********************************************************************************************
 	@test -e $*.asm || ln -s main.asm $*.asm
 	@echo "avra -fI -o $@ -D $*_esc -e $*.eeprom -d $*.obj $*.asm"
 	@set -o pipefail; avra -fI -o $@ -D $*_esc -e $*.eeprom -d $*.obj $*.asm 2>&1 | grep -v 'PRAGMA directives currently ignored'
@@ -23,7 +30,7 @@ $(ALL_TARGETS): main.asm
 test: all
 
 clean:
-	-rm -f $(ALL_TARGETS) *.obj *.eep.hex *.eeprom *.hex *.cof
+	-rm -f $(ALL_TARGETS) *.obj *.eep.hex *.eeprom *.hex *.cof afro_nfet.asm
 
 
 upload:
