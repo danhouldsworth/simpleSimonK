@@ -1,5 +1,5 @@
 ;*****************************************
-;* AfroESC 3 2012-12-02                  *
+;* AfroESC 3  2012-12-02                 *
 ;* Fuses should be lfuse=0x3f hfuse=0xca *
 ;*****************************************
 
@@ -82,7 +82,7 @@
 .equ	txd		= 1
 .equ	rxd		= 0
 
-.equ	INIT_PD		= (1<<ApFET)+(1<<txd)
+.equ	INIT_PD		= (1<<txd)+(1<<ApFET)
 .equ	DIR_PD		= (1<<AnFET)+(1<<BnFET)+(1<<CnFET)+(1<<ApFET)+(1<<txd)
 
 .equ	AnFET_port	= PORTD

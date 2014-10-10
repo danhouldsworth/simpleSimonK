@@ -8,7 +8,7 @@ SHELL = /bin/bash
 
 .SUFFIXES: .inc .hex
 
-ALL_TARGETS = afro_nfet.hex tgy.hex
+ALL_TARGETS = bs_nfet.hex afro_nfet.hex tgy.hex
 
 all: $(ALL_TARGETS)
 
