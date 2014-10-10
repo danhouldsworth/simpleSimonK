@@ -1,14 +1,16 @@
 ;***************************************************************
 ;* For HK Blue Series with only n-Channel FETs                 *
 ;* Fuses should be set to -U lfuse:w:0x2e:m -U hfuse:w:0xcf:m  *
-;* or similar (even intrc will work now)                       *
-;* 09/2011                                                     *
-;* https://github.com/sim-/tgy                                 *
 ;***************************************************************
+
+;-- Device ----------------------------------------------------------------
+;
+.include "hardware/m8def.inc"
+;
+;--------------------------------------------------------------------------
 
 .equ	F_CPU		= 16000000
 .equ	USE_INT0	= 1
-.equ	USE_I2C		= 0	; We could, but FETs are on the I2C ports
 .equ	USE_UART	= 0
 .equ	USE_ICP		= 0
 
