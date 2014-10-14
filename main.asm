@@ -14,9 +14,6 @@
 
 .equ	MOTOR_ID	= 1	; MK-style I2C motor ID, or UART motor number
 
-.equ	BOOT_JUMP	= 1	; Jump to any boot loader when PWM input stays high
-.equ	BOOT_START	= THIRDBOOTSTART
-
 .equ	COMP_PWM	= 1	; During PWM off, switch high side on (unsafe on some boards!)
 .equ	MOTOR_BRAKE	= 1	; Enable brake during neutral/idle ("motor drag" brake)
 .equ	MOTOR_REVERSE	= 1	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
@@ -1109,42 +1106,6 @@ switch_power_off:
 		all_nFETs_off temp1
 		ret
 ;-----bko-----------------------------------------------------------------
-.if BOOT_JUMP
-boot_loader_test:
-		.if USE_ICP
-		sbis	PINB, rcp_in		; Skip clear if ICP pin high
-		.elif USE_INT0 == 1
-		sbis	PIND, rcp_in		; Skip clear if INT0 pin high
-		.else
-		sbic	PIND, rcp_in		; Skip clear if INT0 pin low (inverted)
-		.endif
-		sts	rct_boot, ZH		; Clear rct_count when low
-		lds	temp1, rct_boot
-		sbrs	temp1, 5 		; Wait 32 * 16 * 65536us (~2s) before jumping
-boot_ret:	ret
-; Check for boot loader presence
-		ldi	ZL, low(BOOT_START << 1)
-		cli				; Interrupts depend on ZH being 0
-		ldi	ZH, high(BOOT_START << 1)
-		lpm	temp1, Z+
-		lpm	temp2, Z
-		ldi	ZH, 0
-		sei
-		adiw	temp1, 1		; Check flash contents for 0xffff or 0x0000
-		sbiw	temp1, 2
-		brcs	boot_ret		; Return if boot loader area is empty
-boot_loader_jump:
-		cli
-		out	DDRB, ZH		; Tristate pins
-		out	DDRC, ZH
-		out	DDRD, ZH
-		outi	WDTCR, (1<<WDCE)+(1<<WDE), temp1
-		out	WDTCR, ZH		; Disable watchdog
-		lds	temp1, orig_osccal
-		out	OSCCAL, temp1		; Restore OSCCAL
-		rjmp	BOOT_START		; Jump to boot loader
-.endif
-;-----bko-----------------------------------------------------------------
 control_start:
 
 control_disarm:
@@ -1186,9 +1147,6 @@ i_rc_puls1:	clr	rc_timeout
 i_rc_puls2:	wdr
 		sbrc	flags1, EVAL_RC
 		rjmp	i_rc_puls_rx
-		.if BOOT_JUMP
-		rcall	boot_loader_test
-		.endif
 		.if BEACON
 		lds	temp1, rct_beacon
 		cpi	temp1, 120		; Beep every 120 * 16 * 65536us (~8s)
@@ -1273,9 +1231,6 @@ wait_for_power_on:
 		rjmp	wait_for_power_rx
 		tst	rc_timeout
 		brne	wait_for_power_on	; Tight loop unless rc_timeout is zero
-		.if BOOT_JUMP
-		rcall	boot_loader_test
-		.endif
 		lds	temp1, rct_beacon
 		cpi	temp1, 30		; Disarm after ~2 seconds of no signal
 		brne	wait_for_power_on
