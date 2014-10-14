@@ -6,8 +6,9 @@
 
 ;-- Board -----------------------------------------------------------------
 ;
-.include "afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM & UART)
+; .include "afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM & UART)
 ;.include "tgy.inc"		; TowerPro/Turnigy Basic/Plush "type 2" (INT0 PWM)
+.include "bs_nfet.inc"		; BlueSeries / Armattan 6s 40amp  	(INT0 PWM)
 ;
 ;--------------------------------------------------------------------------
 
@@ -18,7 +19,7 @@
 
 .equ	COMP_PWM	= 1	; During PWM off, switch high side on (unsafe on some boards!)
 .equ	MOTOR_BRAKE	= 1	; Enable brake during neutral/idle ("motor drag" brake)
-.equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
+.equ	MOTOR_REVERSE	= 1	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
 
 .equ	BEACON		= 1	; Beep periodically when RC signal is lost
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
