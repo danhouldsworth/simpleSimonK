@@ -1210,7 +1210,7 @@ wait_for_power_on_init:
 		rcall	switch_power_off	; Disable any active brake
 		sts	brake_active, temp3	; Set new brake_active to brake_want
 
-		ldi	YL, 1 << BRAKE_SPEED
+		ldi	YL, (1 << BRAKE_SPEED) - 1 ; The 1->8 range now gives : 1,3,7,15,31,63,127,255
 		sts	brake_sub, YL
 		ldi2	YL, YH, BRAKE_POWER
 
