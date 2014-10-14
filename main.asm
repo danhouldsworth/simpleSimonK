@@ -6,7 +6,7 @@
 
 ;-- Board -----------------------------------------------------------------
 ;
-; .include "afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM & UART)
+;.include "afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM & UART)
 ;.include "tgy.inc"		; TowerPro/Turnigy Basic/Plush "type 2" (INT0 PWM)
 .include "bs_nfet.inc"		; BlueSeries / Armattan 6s 40amp  	(INT0 PWM)
 ;
@@ -1372,7 +1372,8 @@ run1:		.if MOTOR_REVERSE
 		.endif
 		rjmp	run_reverse
 
-run_forward:	rcall	wait_for_high
+run_forward:
+		rcall	wait_for_high
 		com1com2
 		rcall	wait_for_low
 		com2com3
@@ -1386,7 +1387,8 @@ run_forward:	rcall	wait_for_high
 		com6com1
 		rjmp	run6
 
-run_reverse:	rcall	wait_for_low
+run_reverse:
+		rcall	wait_for_low
 		com1com6
 		rcall	wait_for_high
 		com6com5
@@ -1441,7 +1443,8 @@ run6_1:		; Allow first two loops at full power, then modulate.
 		ldi2	temp1, temp2, PWR_COOL_START
 		rjmp	run6_3
 
-run6_2:		cbr	flags1, (1<<STARTUP)
+run6_2:
+		cbr	flags1, (1<<STARTUP)
 		sts	start_fail, ZH
 		sts	start_modulate, ZH
 		RED_off

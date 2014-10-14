@@ -3,6 +3,7 @@
 
 # Note - usbmodem00065771 should be replaced with FTDI device used for hack flashing to the SPI pads
 # Note - SLAB_USBtoUART is the silicon labs driver that I use for the AfroESC programmer
+# Note - To my knowledge, reading / setting fuses over PWM-pin bootloader is meaningless, but flash / prog mem can be done.
 
 SHELL = /bin/bash
 
@@ -18,7 +19,7 @@ $(ALL_TARGETS): main.asm
 	#********************************************************************************************
 	#                                                                                           *
 	#                                                                                           *
-	# Warning : this will not make using AVRA on OS X Mavericks, use OS X Mountain Lion instead *
+	# Warning : this should now make using AVRA on OS X Mavericks but untested as yet 	    *
 	#                                                                                           *
 	#                                                                                           *
 	#********************************************************************************************
@@ -44,4 +45,5 @@ read_ISP:
 	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
 
 read_PWM:
+	# Note : To my knowledge, reading / setting fuses with PWM is meaningless, but flash / prog mem can be done.
 	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -v -U flash:r:flash_afroRead.hex:i -U eeprom:r:eeprom_afroRead.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
