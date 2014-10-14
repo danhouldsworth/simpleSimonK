@@ -51,8 +51,8 @@
 .equ	mux_b		= 1	; ADC1 phase input
 .equ	mux_a		= 0	; ADC0 phase input
 
-.equ	O_POWER		= 470
-.equ	O_GROUND	= 47
+.equ	O_POWER		= 470	; Now required only for hardware check
+.equ	O_GROUND	= 47 	; Now required only for hardware check
 
 .equ	INIT_PC		= (1<<i2c_clk)+(1<<i2c_data)
 .equ	DIR_PC		= 0

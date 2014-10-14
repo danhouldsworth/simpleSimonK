@@ -47,8 +47,8 @@
 .equ	mux_temperature	= 1	; ADC1 temperature input (some boards) (10k NTC to 5V, 820 to gnd)
 .equ	mux_c		= 0	; ADC0
 
-.equ	O_POWER		= 220
-.equ	O_GROUND	= 51
+; .equ	O_POWER		= 220 	; Now required only for hardware check
+; .equ	O_GROUND	= 51 	; Now required only for hardware check
 
 .equ	INIT_PC		= (1<<BpFET)+(1<<CpFET)
 .equ	DIR_PC		= (1<<BnFET)+(1<<BpFET)+(1<<CpFET)

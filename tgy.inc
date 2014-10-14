@@ -50,8 +50,8 @@
 ;.equ	mux_temperature	= 1	; ADC1 temperature input
 .equ	mux_voltage	= 0	; ADC0 voltage input (10k from Vbat, 1k to gnd, 10.10V -> .918V at ADC0)
 
-.equ	O_POWER		= 10
-.equ	O_GROUND	= 1
+; .equ	O_POWER		= 10 	; Now required only for hardware check
+; .equ	O_GROUND	= 1 	; Now required only for hardware check
 
 .equ	INIT_PC		= 0
 .equ	DIR_PC		= 0

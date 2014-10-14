@@ -23,10 +23,6 @@
 .equ	BEACON		= 1	; Beep periodically when RC signal is lost
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 
-.equ	CELL_MAX_DV	= 43	; Maximum battery cell deciV
-.equ	CELL_COUNT	= 0	; 0: auto, >0: hard-coded number of cells (for reliable LVC > ~4S)
-.equ	BLIP_CELL_COUNT	= 1	; Blip out cell count before arming
-
 ; These might be a bit wide for most radios, but lines up with POWER_RANGE.
 .equ	STOP_RC_PULS	= 1060	; Stop motor at or below this pulse length
 .equ	FULL_RC_PULS	= 1860	; Full speed at or above this pulse length
@@ -683,22 +679,6 @@ mul_y_12x34:
 ;
 ;-------------------------------------------------------------------------
 
-;-- Battery cell count ---------------------------------------------------
-; Assuming a LiPo cell will never exceed 4.3V, we can estimate
-; the number of cells by dividing the measured voltage by 4.3.
-.if defined(mux_voltage) && (!CELL_COUNT && BLIP_CELL_COUNT)
-.set ADC_READ_NEEDED = 1
-
-adc_cell_count:
-		ldi	temp4, mux_voltage | (1<<ADLAR)
-		rcall	adc_read
-		ldi2	temp3, temp4, 256 * 50 * (O_POWER + O_GROUND) / (O_GROUND * CELL_MAX_DV)
-		ldi2	YL, YH, 0x100		; Always at least one cell
-		rcall	mul_y_12x34
-		mov	temp1, YH
-		ret
-.endif
-
 .if ADC_READ_NEEDED
 ;-- ADC input ------------------------------------------------------------
 ; Read ADC from the mux set in temp4 and return result in temp1:temp2.
@@ -1208,31 +1188,6 @@ boot_loader_jump:
 .endif
 ;-----bko-----------------------------------------------------------------
 control_start:
-
-; Check cell count
-.if BLIP_CELL_COUNT
-	.if defined(mux_voltage) && !CELL_COUNT
-		rcall	adc_cell_count
-		cpi	temp1, 5
-		brlo	cell_count_good		; Detection of >=~5 LiPo cells becomes ambiguous based on charge state
-		ldi	temp1, 0
-cell_count_good:
-	.else
-		ldi	temp1, CELL_COUNT
-	.endif
-		mov	YL, temp1		; Beep clobbers temp1-temp5
-		cpi	YL, 0
-		breq	cell_blipper1
-cell_blipper:
-		rcall	wait120ms
-		ldi	temp2, 10		; Short blip (not too long for this)
-		rcall	beep_f4_freq
-		dec	YL
-		brne	cell_blipper
-		rcall	wait120ms
-cell_blipper1:
-
-.endif
 
 control_disarm:
 	; LEDs off while disarmed
