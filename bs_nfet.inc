@@ -19,8 +19,6 @@
 .equ	MOTOR_ADVANCE	= 15
 .equ	TIMING_OFFSET	= 0	; Motor timing offset in microseconds
 
-.equ	CHECK_HARDWARE	= 0	; Check for correct pin configuration, sense inputs, and functioning MOSFETs
-
 ;*********************
 ; PORT D definitions *
 ;*********************
@@ -48,9 +46,6 @@
 .equ	mux_voltage	= 2	; ADC2 voltage input (220k from Vbat, 51k to gnd, 10.10V -> 1.900V at ADC2)
 .equ	mux_temperature	= 1	; ADC1 temperature input (some boards) (10k NTC to 5V, 820 to gnd)
 .equ	mux_c		= 0	; ADC0
-
-; .equ	O_POWER		= 220 	; Now required only for hardware check
-; .equ	O_GROUND	= 51 	; Now required only for hardware check
 
 .equ	INIT_PC		= (1<<BpFET)+(1<<CpFET)
 .equ	DIR_PC		= (1<<BnFET)+(1<<BpFET)+(1<<CpFET)

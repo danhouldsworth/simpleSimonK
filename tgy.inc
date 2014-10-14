@@ -19,8 +19,6 @@
 .equ	MOTOR_ADVANCE	= 18	; Degrees of timing advance (0 - 30, 30 meaning no delay)
 .equ	TIMING_OFFSET	= 0	; Motor timing offset in microseconds
 
-.equ	CHECK_HARDWARE	= 0	; Check for correct pin configuration, sense inputs, and functioning MOSFETs
-
 ;*********************
 ; PORT D definitions *
 ;*********************
@@ -49,9 +47,6 @@
 ;.equ			= 2	; ADC2 (plush has something on here)
 ;.equ	mux_temperature	= 1	; ADC1 temperature input
 .equ	mux_voltage	= 0	; ADC0 voltage input (10k from Vbat, 1k to gnd, 10.10V -> .918V at ADC0)
-
-; .equ	O_POWER		= 10 	; Now required only for hardware check
-; .equ	O_GROUND	= 1 	; Now required only for hardware check
 
 .equ	INIT_PC		= 0
 .equ	DIR_PC		= 0

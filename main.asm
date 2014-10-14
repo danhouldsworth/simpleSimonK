@@ -74,8 +74,6 @@
 .equ	T1CLK		= (1<<CS10)+(USE_ICP<<ICES1)+(USE_ICP<<ICNC1)	; clk/1 == 16MHz
 .equ	T2CLK		= (1<<CS20)	; clk/1 == 16MHz
 
-; Conditional code inclusion
-.set	ADC_READ_NEEDED	= 0		; Reading from ADCs
 
 ;**** **** **** **** ****
 ; Register Definitions
@@ -674,47 +672,6 @@ mul_y_12x34:
 		adc	YH, temp6		; Product is now in Y, flags set
 		ret
 
-;-- Hardware diagnostics -------------------------------------------------
-;
-.include "libraries/hardware_diagnostics.inc"
-;
-;-------------------------------------------------------------------------
-
-.if ADC_READ_NEEDED
-;-- ADC input ------------------------------------------------------------
-; Read ADC from the mux set in temp4 and return result in temp1:temp2.
-;
-; The ADC clock on the ATmega8 needs to run between 50kHz and 200kHz for
-; full 10-bit sampling. At 8Mhz or 16MHz, we can use /128 to get 62.5kHz
-; or 125kHz. The datasheet says we can overclock further at the expense
-; of least significant bits. However, overclocked initialization appears
-; to offset zero when running the ADC clock any faster than 500kHz. As we
-; must turn off the ADC to use ADMUX for the comparator while driving the
-; motor, the maximum usable speed appears to be 500kHz (16MHz/32). This
-; results in minimum sample time of 25/500kHz == 50microseconds. Slowest
-; sample time is 100microseconds at 8MHz or 200microseconds at 16MHz.
-;
-; If AVcc is tied to AREF, the ADC is intended to be used with no
-; internal reference enabled (REFS0 and REFS1 not set). If a capacitor is
-; at AREF, one of the internal references must be set, or all the
-; capacitor will not charge and all ADC channels will read 0x3ff. REFS1
-; can still be set with AVcc bridged to AREF, since then it just gets
-; bridged internally and externally. The internal 2.56V reference (REFS0
-; and REFS1 set) can only be enabled if AVcc is NOT bridged.
-adc_read:
-		out	SFIOR, ZH		; Disable the Analog Comparator Multiplexer
-		sbr	temp4, (1<<REFS0)	; Enable AVCC (5.0V) reference
-		out	ADMUX, temp4		; Set ADC channel, AVcc reference with cap at AREF (should be safe if bridged)
-		ldi	temp1, (1<<ADEN)+(1<<ADSC)+(1<<ADPS2)+(1<<ADPS1)+(1<<ADPS0)
-		out	ADCSRA, temp1		; Enable the ADC, start conversion
-		wdr				; Will wait 25*128 cycles
-adc_wait:	sbic	ADCSRA, ADSC
-		rjmp	adc_wait
-		in	temp1, ADCL
-		in	temp2, ADCH
-		out	ADCSRA, ZH		; Disable the ADC (next enable and sample will take 25 ADC cycles)
-		ret
-.endif
 
 ;-----bko-----------------------------------------------------------------
 ; Unlike the normal evaluate_rc, we look here for programming mode (pulses
@@ -1772,11 +1729,6 @@ clear_loop1:	cp	ZL, r0
 		; * The comment suggests this is only needed for I2C, but I can't find where interupts are turned back on before the controlled start
 		; * I'll only comment and not delete
 
-	; Check hardware (before making any beeps)
-		.if CHECK_HARDWARE
-		rcall	hardware_check
-		.endif
-
 	; Check reset cause
 		bst	temp7, PORF		; Power-on reset
 		cpse	temp7, ZH		; or zero
@@ -1825,8 +1777,6 @@ init_bitbeep2:	sbrs	i_temp1, 0
 		rjmp	init_bitbeep1		; Loop forever
 
 
-; -- Include Turnigy USB linker STK500v2 boot loader on PWM input pin -----
-;
-.include "libraries/boot.inc"
+; -------------------- End (Boot loader would go here) --------------------
 ;
 ;--------------------------------------------------------------------------
