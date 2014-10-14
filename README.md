@@ -6,15 +6,18 @@ The code libraries have been modified and stripped down for my needs.
 
 ### The only ESCs it supports are :
 
-* My favourite ESC the AfroNfet 12Amp, 20Amp, 20Amp-slim & 30Amp (using PWM bootloading)
-* (As I have many old ones lying around) The Turnigy / 3DR / jDrones stock ESC (using ISP flashing tool)
+* Afro (12Amp, 20Amp, 20Amp-slim, 30Amp AND 20AMP HighVolt 3-8s)
+* Turnigy / 3DR / jDrones stock ESC
+* Armattan 30Amp 6s (A relabelled BlueSeries!?)
 
 ### My bespoke needs driving the project :
 
-* I'm interested in multicopters with fast response rates (both up and down the throttle range) and won't be using ESC/motor/prop combos that require throttle smoothing or ramping features.
-* The support of dozens of boards / motor combos is distracting me from being able to understand the code.
-* Some features like I2C (as is too slow), or RC_Reverse will not get used in my applications.
-* I'd like to avoid manual calibration (which I find so cumbersome it almost takes the fun out of multi-copters). I far prefer to re-flash with known and recorded settings.
+* I'm interested in multicopters with the fastest possible response rates (moving both up and down the throttle range)
+* Understanding the principles of the code is far more important to me than the support of dozens of boards / motor combos (which is distracting me from being able to understand the code)
+* Many features will not get used in my applications (like I2C, RC_Reverse etc)
+* I like to avoid manual calibration of ESCs and far prefer to re-flash with known and recorded settings.
+* Now that I build with direct soldering, I flash with ISP rather than PWM-pin bootloader.
+* If in doubt, 'nice to have' or 'interesting' features will still get stripped out (eg. Hardware check / Cell Count / ADC read) in the spirit of maintaining the simplest possible codebase for my use case. I can always refer back to simonK 'proper' if needed.
 
 That, and I'm trying to learn all this stuff, so have tinkered where appropriate (like the power on melody...!)
 
@@ -22,7 +25,7 @@ That, and I'm trying to learn all this stuff, so have tinkered where appropriate
 
 * Use Sublime Text with AVR ASM to parse, and stick with tab space of 8.
 * Build tool chain AVRA and AVRDUDE are installed with homebrew.
-* AVRA 1.3.0 on OS Mavericks has issue with command on same line as labels / C debugger. Rather than reformat wholesale (this would harm readability) I've elected to complile on OSX Mountain lion until AVRA is fixed.
+* AVRA 1.3.0 on OS Mavericks has issue with some commands on same line as labels / C debugger.
 
 ### Questions on learning topics:
 
