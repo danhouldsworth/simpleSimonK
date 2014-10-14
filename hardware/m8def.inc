@@ -41,16 +41,16 @@
 #define _M8DEF_INC_
 
 
-#pragma partinc 0
+; #pragma partinc 0
 
 ; ***** SPECIFY DEVICE ***************************************************
 .device ATmega8
-#pragma AVRPART ADMIN PART_NAME ATmega8
+; #pragma AVRPART ADMIN PART_NAME ATmega8
 .equ	SIGNATURE_000	= 0x1e
 .equ	SIGNATURE_001	= 0x93
 .equ	SIGNATURE_002	= 0x07
 
-#pragma AVRPART CORE CORE_VERSION V2E
+; #pragma AVRPART CORE CORE_VERSION V2E
 
 
 ; ***** I/O REGISTER DEFINITIONS *****************************************
@@ -687,10 +687,10 @@
 .equ	E2END	= 0x01ff
 .equ	EEPROMEND	= 0x01ff
 .equ	EEADRBITS	= 9
-#pragma AVRPART MEMORY PROG_FLASH 8192
-#pragma AVRPART MEMORY EEPROM 512
-#pragma AVRPART MEMORY INT_SRAM SIZE 1024
-#pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
+; #pragma AVRPART MEMORY PROG_FLASH 8192
+; #pragma AVRPART MEMORY EEPROM 512
+; #pragma AVRPART MEMORY INT_SRAM SIZE 1024
+; #pragma AVRPART MEMORY INT_SRAM START_ADDR 0x60
 
 
 
@@ -731,7 +731,7 @@
 
 .equ	INT_VECTORS_SIZE	= 19	; size in words
 
-#pragma AVRPART CORE INSTRUCTIONS_NOT_SUPPORTED break
+; #pragma AVRPART CORE INSTRUCTIONS_NOT_SUPPORTED break
 
 #endif  /* _M8DEF_INC_ */
 

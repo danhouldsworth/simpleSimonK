@@ -6,9 +6,17 @@
 
 ;-- Board -----------------------------------------------------------------
 ;
-;.include "afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM & UART)
-;.include "tgy.inc"		; TowerPro/Turnigy Basic/Plush "type 2" (INT0 PWM)
-.include "bs_nfet.inc"		; BlueSeries / Armattan 6s 40amp  	(INT0 PWM)
+#if defined(afro_nfet_esc)
+.include "hardware/afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM & UART)
+#elif defined(afro_hv_esc)
+.include "hardware/afro_hv.inc"		; Afro 3-8s ESC				(ICP PWM & UART)
+#elif defined(tgy_esc)
+.include "hardware/tgy.inc"		; TowerPro/Turnigy Basic/Plush type 2 	(INT0 PWM)
+#elif defined(bs_nfet_esc)
+.include "hardware/bs_nfet.inc"		; BlueSeries / Armattan 6s 40amp  	(INT0 PWM)
+#else
+#error "Unrecognized board type."
+#endif
 ;
 ;--------------------------------------------------------------------------
 
