@@ -26,7 +26,6 @@
 .equ	MOTOR_BRAKE	= 1	; Enable brake during neutral/idle ("motor drag" brake)
 .equ	MOTOR_REVERSE	= 1	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
 
-.equ	BEACON		= 1	; Beep periodically when RC signal is lost
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 
 ; These might be a bit wide for most radios, but lines up with POWER_RANGE.
@@ -149,7 +148,6 @@ ocr1ax:		.byte	1	; 3rd byte of OCR1A
 tcnt1x:		.byte	1	; 3rd byte of TCNT1
 pwm_on_ptr:	.byte	1	; Next PWM ON vector
 rct_boot:	.byte	1	; Counter which increments while rc_timeout is 0 to jump to boot loader
-rct_beacon:	.byte	1	; Counter which increments while rc_timeout is 0 to disarm and beep occasionally
 last_tcnt1_l:	.byte	1	; last timer1 value
 last_tcnt1_h:	.byte	1
 last_tcnt1_x:	.byte	1
@@ -453,9 +451,6 @@ t1ovfl_int1:	out	SREG, i_sreg
 t1ovfl_int2:	lds	i_temp1, rct_boot
 		inc	i_temp1
 		sts	rct_boot, i_temp1
-		lds	i_temp1, rct_beacon
-		inc	i_temp1
-		sts	rct_beacon, i_temp1
 		rjmp	t1ovfl_int1
 ;-----bko-----------------------------------------------------------------
 ; NOTE: This interrupt uses the 16-bit atomic timer read/write register
@@ -1078,18 +1073,9 @@ control_disarm:
 i_rc_puls1:	clr	rc_timeout
 		cbr	flags1, (1<<EVAL_RC)+(1<<UART_MODE)
 		sts	rct_boot, ZH
-		sts	rct_beacon, ZH
 i_rc_puls2:	wdr
 		sbrc	flags1, EVAL_RC
 		rjmp	i_rc_puls_rx
-		.if BEACON
-		lds	temp1, rct_beacon
-		cpi	temp1, 120		; Beep every 120 * 16 * 65536us (~8s)
-		brne	i_rc_puls2
-		ldi	temp1, 60
-		sts	rct_beacon, temp1	; Double rate after the first beep
-		rcall	beep_f3			; Beacon
-		.endif
 		rjmp	i_rc_puls2
 i_rc_puls_rx:	rcall	evaluate_rc_init
 		lds	YL, rc_duty_l
@@ -1130,7 +1116,6 @@ restart_control:
 		RED_off
 wait_for_power_on_init:
 		sts	rct_boot, ZH
-		sts	rct_beacon, ZH
 
 		.if MOTOR_BRAKE
 		lds	temp3, brake_want
@@ -1162,9 +1147,6 @@ wait_for_power_on:
 		rjmp	wait_for_power_rx
 		tst	rc_timeout
 		brne	wait_for_power_on	; Tight loop unless rc_timeout is zero
-		lds	temp1, rct_beacon
-		cpi	temp1, 30		; Disarm after ~2 seconds of no signal
-		brne	wait_for_power_on
 		rcall	switch_power_off	; Brake may have been on
 		rcall	wait30ms
 		rcall 	beep_f4 		; Play beeps for signal lost, disarming
@@ -1316,7 +1298,7 @@ start_failed:
 start_fail_beep:
 		rcall	wait240ms
 		rcall	wait240ms
-		rcall	beep_f4			; "Start failed" beacon
+		; rcall	beep_f4			; "Start failed" beacon
 		rcall	evaluate_rc		; Returns rc_duty when !SET_DUTY
 		adiw	YL, 0			; Test for zero
 		brne	start_fail_beep
