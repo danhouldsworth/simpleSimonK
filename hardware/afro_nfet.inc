@@ -11,7 +11,6 @@
 
 .equ	F_CPU		= 16000000
 .equ	USE_INT0	= 0
-.equ	USE_UART	= 1
 .equ	USE_ICP		= 1
 
 .equ	DEAD_LOW_NS	= 300	; Low-side dead time w/COMP_PWM (62.5ns steps @ 16MHz, max 2437ns)

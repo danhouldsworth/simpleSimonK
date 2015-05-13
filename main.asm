@@ -7,9 +7,9 @@
 ;-- Board -----------------------------------------------------------------
 ;
 #if defined(afro_nfet_esc)
-.include "hardware/afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM & UART)
+.include "hardware/afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM)
 #elif defined(afro_hv_esc)
-.include "hardware/afro_hv.inc"		; Afro 3-8s ESC				(ICP PWM & UART)
+.include "hardware/afro_hv.inc"		; Afro 3-8s ESC				(ICP PWM)
 #elif defined(tgy_esc)
 .include "hardware/tgy.inc"		; TowerPro/Turnigy Basic/Plush type 2 	(INT0 PWM)
 #elif defined(bs_nfet_esc)
@@ -105,7 +105,7 @@
 ;	.equ	GET_STATE	= 3	; set if state is to be send
 ;	.equ	EEPROM_RESET	= 4	; if set, reset EEPROM
 ;	.equ	EEPROM_WRITE	= 5	; if set, save settings to EEPROM
-	.equ	UART_SYNC	= 6	; if set, we are waiting for our serial throttle byte
+;	.equ	UART_SYNC	= 6	; if set, we are waiting for our serial throttle byte
 	.equ	NO_CALIBRATION	= 7	; if set, disallow calibration (unsafe reset cause)
 .def	flags1		= r17	; state flags
 	.equ	POWER_ON	= 0	; if set, switching fets is enabled
@@ -230,7 +230,7 @@ RAM_end:	.byte	1
 		rjmp t1ovfl_int	; t1ovfl_int	OVF1addr=$008	; Overflow1 Interrupt Vector Address
 		reti		; t0ovfl_int	OVF0addr=$009	; Overflow0 Interrupt Vector Address
 		reti		; spi_int	SPIaddr =$00a	; SPI Interrupt Vector Address
-		rjmp urxc_int	; urxc		URXCaddr=$00b	; USART Receive Complete Interrupt Vecto
+		reti 		; urxc		URXCaddr=$00b	; USART Receive Complete Interrupt Vecto
 		reti		; udre		UDREaddr=$00c	; USART Data Register Empty Interrupt Ve
 		reti		; utxc		UTXCaddr=$00d	; USART Transmit Complete Interrupt Vect
 		reti		; adc_int	ADCCaddr=$00e	; ADC Interrupt Vector Address
@@ -515,41 +515,7 @@ rcpint_exit:	rcp_int_rising_edge i_temp1	; Set next int to rising edge
 		out	SREG, i_sreg
 		reti
 	.endif
-;-----bko-----------------------------------------------------------------
-; MK BL-Ctrl v1, v2 compatible input control
-; Ctrl-click Settings in MKTool for reversing and additional settings
 
-;-----bko-----------------------------------------------------------------
-urxc_int:
-; This is Bernhard's serial protocol implementation in the UART
-; version here: http://home.versanet.de/~b-konze/blc_6a/blc_6a.htm
-; This seems to be implemented for a project described here:
-; http://www.control.aau.dk/uav/reports/10gr833/10gr833_student_report.pdf
-; The UART runs at 38400 baud, N81. Input is ignored until >= 0xf5
-; is received, where we start counting to MOTOR_ID, at which
-; the received byte is used as throttle input. 0 is neutral,
-; >= 200 is FULL_POWER.
-	.if USE_UART
-		in	i_sreg, SREG
-		in	i_temp1, UDR
-		cpi	i_temp1, 0xf5		; Start throttle byte sequence
-		breq	urxc_x3d_sync
-		sbrs	flags0, UART_SYNC
-		rjmp	urxc_exit		; Throw away if not UART_SYNC
-		brcc	urxc_unknown
-		lds	i_temp2, motor_count
-		dec	i_temp2
-		brne	urxc_set_exit		; Skip when motor_count != 0
-		mov	rx_h, i_temp1		; Save 8-bit input
-		sbr	flags1, (1<<EVAL_RC)+(1<<UART_MODE)
-urxc_unknown:	cbr	flags0, (1<<UART_SYNC)
-		rjmp	urxc_exit
-urxc_x3d_sync:	sbr	flags0, (1<<UART_SYNC)
-		ldi	i_temp2, MOTOR_ID	; Start counting down from MOTOR_ID
-urxc_set_exit:	sts	motor_count, i_temp2
-urxc_exit:	out	SREG, i_sreg
-		reti
-	.endif
 ;-----bko-----------------------------------------------------------------
 ; beeper: timer0 is set to 1µs/count
 beep_f1:	ldi	temp2, 80
@@ -649,14 +615,9 @@ RAM_copy_loop1:	lpm	temp1, Z+
 ; will have no effect on boards with external oscillators, except that
 ; the EEPROM still uses the internal oscillator (at 1MHz).
 osccal_set:
-.if CPU_MHZ == 16
 		ldi	temp1, 0xff		; Almost 16MHz
-.else
-		ldi	temp1, 0x9f		; Almost 8MHz
-.endif
 		out	OSCCAL, temp1
 		ret
-
 
 ;-----bko-----------------------------------------------------------------
 ; Multiply temp1:temp2 by temp3:temp4 and add high 16 bits of result to Y.
@@ -688,19 +649,9 @@ mul_y_12x34:
 ; internal RC slows down when hot, making it impossible to reach full
 ; throttle.
 evaluate_rc_init:
-		.if USE_UART
-		sbrc	flags1, UART_MODE
-		rjmp	evaluate_rc_uart
-		.endif
-
-;-----bko-----------------------------------------------------------------
 ; These routines may clobber temp* and Y, but not X.
 evaluate_rc:
-		.if USE_UART
-		sbrc	flags1, UART_MODE
-		rjmp	evaluate_rc_uart
-		.endif
-	; Fall through to evaluate_rc_puls
+; Fall through to evaluate_rc_puls
 ;-----bko-----------------------------------------------------------------
 .if USE_ICP || USE_INT0
 evaluate_rc_puls:
@@ -748,19 +699,6 @@ rc_no_set_duty:	ldi	temp1, 0xff
 		cp	rc_timeout, temp1
 		adc	rc_timeout, ZH
 		ret
-;-----bko-----------------------------------------------------------------
-.if USE_UART
-evaluate_rc_uart:
-		mov	YH, rx_h		; Copy 8-bit input
-		cbr	flags1, (1<<EVAL_RC)+(1<<REVERSE)
-		ldi	YL, 0
-		cpi	YH, 0
-		breq	rc_duty_set		; Power off
-	; Scale so that YH == 200 is MAX_POWER.
-		movw	temp1, YL
-		ldi2	temp3, temp4, 0x100 * (POWER_RANGE - MIN_DUTY) / 200
-		rjmp	rc_do_scale		; The rest of the code is common
-.endif
 ;-----bko-----------------------------------------------------------------
 ; Calculate the neutral offset and forward (and reverse) scaling factors
 ; to line up with the high/low (and neutral) pulse lengths.
@@ -1130,17 +1068,6 @@ control_disarm:
 		out	TIMSK, temp1		; Enable t1ovfl_int, t1oca_int, t2ovfl_int
 
 	; Initialize input sources (rc-puls)
-		.if USE_UART
-		.equ	BAUD_RATE = 38400
-		.equ	UBRR_VAL = F_CPU / BAUD_RATE / 16 - 1
-		outi	UBRRH, high(UBRR_VAL), temp1
-		outi	UBRRL, low(UBRR_VAL), temp1
-		sbi	UCSRB, RXEN		; We don't actually tx
-		outi	UCSRC, (1<<URSEL)|(1<<UCSZ1)|(1<<UCSZ0), temp1	; N81
-		in	temp1, UDR
-		sbi	UCSRA, RXC		; clear flag
-		sbi	UCSRB, RXCIE		; enable reception irq
-		.endif
 		.if USE_INT0 || USE_ICP
 		rcp_int_rising_edge temp1
 		rcp_int_enable temp1
@@ -1172,10 +1099,6 @@ i_rc_puls_rx:	rcall	evaluate_rc_init
 		ldi	temp1, 10		; wait for this count of receiving power off
 		cp	rc_timeout, temp1
 		brlo	i_rc_puls2
-		.if USE_UART
-		sbrs	flags1, UART_MODE
-		cbi	UCSRB, RXEN		; Turn off receiver
-		.endif
 		.if USE_INT0 || USE_ICP
 		mov	temp1, flags1
 		andi	temp1, (1<<UART_MODE)

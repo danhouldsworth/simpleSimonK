@@ -11,7 +11,6 @@
 
 .equ	F_CPU		= 16000000
 .equ	USE_INT0	= 1
-.equ	USE_UART	= 0
 .equ	USE_ICP		= 0
 
 .equ	DEAD_LOW_NS	= 300
