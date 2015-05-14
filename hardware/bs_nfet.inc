@@ -16,7 +16,6 @@
 .equ	DEAD_LOW_NS	= 300
 .equ	DEAD_HIGH_NS	= 300
 .equ	MOTOR_ADVANCE	= 15
-.equ	TIMING_OFFSET	= 0	; Motor timing offset in microseconds
 
 ;*********************
 ; PORT D definitions *

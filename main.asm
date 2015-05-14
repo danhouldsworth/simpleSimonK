@@ -453,21 +453,16 @@ t1ovfl_int2:	lds	i_temp1, rct_boot
 ; (see "Accessing 16-bit registers" in the Atmel documentation)
 ; icp1 = rc pulse input, if enabled
 rcp_int:
-	.if USE_ICP || USE_INT0
-		.if USE_ICP
-			in	i_temp1, ICR1L		; get captured timer values
-			in	i_temp2, ICR1H
-			in	i_sreg, TCCR1B		; abuse i_sreg to hold value
-			sbrs	i_sreg, ICES1		; evaluate edge of this interrupt
-		.else
-			in	i_temp1, TCNT1L		; get timer1 values
-			in	i_temp2, TCNT1H
-			.if USE_INT0 == 1
-				sbis	PIND, rcp_in	; evaluate edge of this interrupt
-			.else
-				sbic	PIND, rcp_in	; inverted signalling
-			.endif
-		.endif
+	.if USE_ICP
+		in	i_temp1, ICR1L		; get captured timer values
+		in	i_temp2, ICR1H
+		in	i_sreg, TCCR1B		; abuse i_sreg to hold value
+		sbrs	i_sreg, ICES1		; evaluate edge of this interrupt
+	.else
+		in	i_temp1, TCNT1L		; get timer1 values
+		in	i_temp2, TCNT1H
+		sbis	PIND, rcp_in	; evaluate edge of this interrupt
+	.endif
 		rjmp	falling_edge
 rising_edge:
 		in	i_sreg, SREG
@@ -503,7 +498,6 @@ falling_edge:
 rcpint_exit:	rcp_int_rising_edge i_temp1	; Set next int to rising edge
 		out	SREG, i_sreg
 		reti
-	.endif
 
 ;-----bko-----------------------------------------------------------------
 ; beeper: timer0 is set to 1µs/count
@@ -642,7 +636,6 @@ evaluate_rc_init:
 evaluate_rc:
 ; Fall through to evaluate_rc_puls
 ;-----bko-----------------------------------------------------------------
-.if USE_ICP || USE_INT0
 evaluate_rc_puls:
 		cbr	flags1, (1<<EVAL_RC)+(1<<REVERSE)
 		sts	brake_want, ZH
@@ -666,7 +659,6 @@ puls_zero:	clr	YL
 puls_plus:
 		lds	temp3, fwd_scale_l	; Load forward scaling factor
 		lds	temp4, fwd_scale_h
-.endif
 	; The following is used by all input modes
 rc_do_scale:	ldi2	YL, YH, MIN_DUTY	; Offset result so that 0 is MIN_DUTY
 		rcall	mul_y_12x34		; Scaled result is now in Y
@@ -831,36 +823,13 @@ update_timing4:	movw	timing_duty_l, XL
 		ror	temp2
 		ror	temp1
 
-.if defined(DC_BIAS_CANCEL)
-		lds	temp5, last_tcnt1_l	; restore original c as a'
-		lds	temp6, last_tcnt1_h
-		lds	temp4, last_tcnt1_x
-		sub	temp5, YL		; a'-= b
-		sbc	temp6, YH
-		sbc	temp4, temp7
-
-		add	temp5, temp1		; a'+= c'
-		adc	temp6, temp2
-		adc	temp4, temp3
-		lsr	temp4			; a'>>= 1
-		ror	temp6
-		ror	temp5
-		add	YL, temp5		; b+= a' -> YL:YH:temp7 become filtered ZC time
-		adc	YH, temp6
-		adc	temp7, temp4
-.else
 		lds	YL, last_tcnt1_l	; restore original c as a'
 		lds	YH, last_tcnt1_h
 		lds	temp7, last_tcnt1_x
-.endif
 
 		ldi	temp4, (30 - MOTOR_ADVANCE) * 256 / 60
 		rcall	update_timing_add_degrees
-.if TIMING_OFFSET
-		sbiwx	YL, YH, TIMING_OFFSET * CPU_MHZ
-		ldi	temp4, byte3(TIMING_OFFSET * CPU_MHZ)
-		sbc	temp7, temp4
-.endif
+
 		sts	com_time_l, YL		; Store start of next commutation
 		sts	com_time_h, YH
 		sts	com_time_x, temp7
@@ -1047,10 +1016,8 @@ control_disarm:
 		out	TIMSK, temp1		; Enable t1ovfl_int, t1oca_int, t2ovfl_int
 
 	; Initialize input sources (rc-puls)
-		.if USE_INT0 || USE_ICP
 		rcp_int_rising_edge temp1
 		rcp_int_enable temp1
-		.endif
 
 	; Wait for one of the input sources to give arming input
 

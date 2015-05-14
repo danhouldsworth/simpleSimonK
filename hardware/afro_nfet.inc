@@ -16,7 +16,6 @@
 .equ	DEAD_LOW_NS	= 300	; Low-side dead time w/COMP_PWM (62.5ns steps @ 16MHz, max 2437ns)
 .equ	DEAD_HIGH_NS	= 300	; High-side dead time w/COMP_PWM (62.5ns steps @ 16MHz, max roughly PWM period)
 .equ	MOTOR_ADVANCE	= 15
-.equ	TIMING_OFFSET	= 0	; Motor timing offset in microseconds
 
 ;*********************
 ; PORT B definitions *

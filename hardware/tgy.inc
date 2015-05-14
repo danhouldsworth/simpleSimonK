@@ -16,7 +16,6 @@
 .equ    DEAD_LOW_NS     = 450	; May work on some boards, but be careful!
 .equ    DEAD_HIGH_NS    = 8000
 .equ	MOTOR_ADVANCE	= 18	; Degrees of timing advance (0 - 30, 30 meaning no delay)
-.equ	TIMING_OFFSET	= 0	; Motor timing offset in microseconds
 
 ;*********************
 ; PORT D definitions *
