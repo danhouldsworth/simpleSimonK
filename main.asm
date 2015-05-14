@@ -110,7 +110,7 @@
 	.equ	POWER_ON	= 0	; if set, switching fets is enabled
 	.equ	FULL_POWER	= 1	; 100% on - don't switch off, but do OFF_CYCLE working
 ;	.equ	I2C_MODE	= 2	; if receiving updates via I2C
-	.equ	UART_MODE	= 3	; if receiving updates via UART
+;	.equ	UART_MODE	= 3	; if receiving updates via UART
 	.equ	EVAL_RC		= 4	; if set, evaluate rc command while waiting for OCT1
 	.equ	ACO_EDGE_HIGH	= 5	; if set, looking for ACO high - same bit position as ACO
 	.equ	STARTUP		= 6	; if set, startup-phase is active
@@ -1071,7 +1071,7 @@ control_disarm:
 	; Wait for one of the input sources to give arming input
 
 i_rc_puls1:	clr	rc_timeout
-		cbr	flags1, (1<<EVAL_RC)+(1<<UART_MODE)
+		cbr	flags1, (1<<EVAL_RC)
 		sts	rct_boot, ZH
 i_rc_puls2:	wdr
 		sbrc	flags1, EVAL_RC
@@ -1085,13 +1085,6 @@ i_rc_puls_rx:	rcall	evaluate_rc_init
 		ldi	temp1, 10		; wait for this count of receiving power off
 		cp	rc_timeout, temp1
 		brlo	i_rc_puls2
-		.if USE_INT0 || USE_ICP
-		mov	temp1, flags1
-		andi	temp1, (1<<UART_MODE)
-		breq	i_rc_puls3
-		rcp_int_disable temp1		; Turn off RC pulse interrupt
-i_rc_puls3:
-		.endif
 
 		rcall 	beep_f1 		; signal: rcpuls ready [Custom tune!]
 		rcall 	beep_f2
