@@ -29,8 +29,8 @@
 ; These might be a bit wide for most radios, but lines up with POWER_RANGE.
 .equ	STOP_RC_PULS	= 1060	; Stop motor at or below this pulse length
 .equ	FULL_RC_PULS	= 1860	; Full speed at or above this pulse length
-.equ	MAX_RC_PULS	= 2400	; Throw away any pulses longer than this
-.equ	MIN_RC_PULS	= 100	; Throw away any pulses shorter than this
+.equ	MAX_RC_PULS	= 1870	; Throw away any pulses longer than this
+.equ	MIN_RC_PULS	= 1050	; Throw away any pulses shorter than this
 .equ	MID_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS) / 2
 
 .equ	CPU_MHZ		= F_CPU / 1000000
@@ -190,27 +190,6 @@ RAM_end:	.byte	1
 .org 0
 ;**** **** **** **** ****
 ; ATmega8 interrupts
-
-;.equ	INT0addr=$001	; External Interrupt0 Vector Address
-;.equ	INT1addr=$002	; External Interrupt1 Vector Address
-;.equ	OC2addr =$003	; Output Compare2 Interrupt Vector Address
-;.equ	OVF2addr=$004	; Overflow2 Interrupt Vector Address
-;.equ	ICP1addr=$005	; Input Capture1 Interrupt Vector Address
-;.equ	OC1Aaddr=$006	; Output Compare1A Interrupt Vector Address
-;.equ	OC1Baddr=$007	; Output Compare1B Interrupt Vector Address
-;.equ	OVF1addr=$008	; Overflow1 Interrupt Vector Address
-;.equ	OVF0addr=$009	; Overflow0 Interrupt Vector Address
-;.equ	SPIaddr =$00a	; SPI Interrupt Vector Address
-;.equ	URXCaddr=$00b	; USART Receive Complete Interrupt Vector Address
-;.equ	UDREaddr=$00c	; USART Data Register Empty Interrupt Vector Address
-;.equ	UTXCaddr=$00d	; USART Transmit Complete Interrupt Vector Address
-;.equ	ADCCaddr=$00e	; ADC Interrupt Vector Address
-;.equ	ERDYaddr=$00f	; EEPROM Interrupt Vector Address
-;.equ	ACIaddr =$010	; Analog Comparator Interrupt Vector Address
-;.equ	TWIaddr =$011	; Irq. vector address for Two-Wire Interface
-;.equ	SPMaddr =$012	; SPM complete Interrupt Vector Address
-;.equ	SPMRaddr =$012	; SPM complete Interrupt Vector Address
-
 ;-----bko-----------------------------------------------------------------
 ; Reset and interrupt jump table
 ; When multiple interrupts are pending, the vectors are executed from top
@@ -348,25 +327,25 @@ pwm_on:
 		BpFET_off
 		sbrc	flags2, C_FET
 		CpFET_off
-	.if EXTRA_DEAD_TIME_HIGH > MAX_BUSY_WAIT_CYCLES
+.if EXTRA_DEAD_TIME_HIGH > MAX_BUSY_WAIT_CYCLES
 		; Reschedule to interrupt once the dead time has passed
-		.if high(EXTRA_DEAD_TIME_HIGH)
+	.if high(EXTRA_DEAD_TIME_HIGH)
 		ldi	i_temp1, high(EXTRA_DEAD_TIME_HIGH)
 		mov	tcnt2h, i_temp1
 		ldi	ZL, pwm_on_fast_high
-		.else
+	.else
 		ldi	ZL, pwm_on_fast
-		.endif
+	.endif
 		ldi	i_temp1, 0xff - low(EXTRA_DEAD_TIME_HIGH)
 		out	TCNT2, i_temp1
 		reti				; Do something else while we wait
 		.equ	CPWM_OVERHEAD_HIGH = 7 + 8 + EXTRA_DEAD_TIME_HIGH
-	.else
+.else
 		; Waste cycles to wait for the dead time
 		cycle_delay EXTRA_DEAD_TIME_HIGH
 		.equ	CPWM_OVERHEAD_HIGH = 7 + EXTRA_DEAD_TIME_HIGH
 		; Fall through
-	.endif
+.endif
 
 pwm_on_fast:
 		sbrc	flags2, A_FET
@@ -401,11 +380,11 @@ pwm_off:
 		out	TCNT2, off_duty_l	; 1 cycle
 		sbrc	flags2, SKIP_CPWM	; 2 cycles if skip, 1 cycle otherwise
 		reti
-		.if DEAD_TIME_LOW > 9
+	.if DEAD_TIME_LOW > 9
 		.equ	EXTRA_DEAD_TIME_LOW = DEAD_TIME_LOW - 9
-		.else
+	.else
 		.equ	EXTRA_DEAD_TIME_LOW = 0
-		.endif
+	.endif
 		cycle_delay EXTRA_DEAD_TIME_LOW - 2
 		.equ	CPWM_OVERHEAD_LOW = 9 + EXTRA_DEAD_TIME_LOW
 		sbrc	flags2, A_FET
@@ -416,9 +395,6 @@ pwm_off:
 		CpFET_on
 		reti				; 4 cycles
 
-.if high(pwm_off)
-.error "high(pwm_off) is non-zero; please move code closer to start or use 16-bit (ZH) jump registers"
-.endif
 ;-----bko-----------------------------------------------------------------
 ; timer1 output compare interrupt
 t1oca_int:	in	i_sreg, SREG
