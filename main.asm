@@ -69,7 +69,7 @@
 
 .equ	ENOUGH_GOODIES	= 12	; This many start cycles without timeout will transition to running mode
 .equ	ZC_CHECK_FAST	= 12	; Number of ZC check loops under which PWM noise should not matter
-.equ	ZC_CHECK_MAX	= POWER_RANGE / 32 ; Limit ZC checking to about 1/2 PWM interval
+.equ	ZC_CHECK_MAX	= POWER_RANGE / 32 ; ~27 Limit ZC checking to about 1/2 PWM interval
 .equ	ZC_CHECK_MIN	= 3
 
 .equ	T0CLK		= (1<<CS01)	; clk/8 == 2MHz
@@ -862,14 +862,12 @@ set_new_duty11:
 		sbr	flags1, (1<<POWER_ON)
 		; At higher PWM frequencies, halve the frequency
 		; when starting -- this helps hard drive startup
-		.if POWER_RANGE < 1000 * CPU_MHZ / 16
 		sbrs	flags1, STARTUP
 		rjmp	set_new_duty_set
 		lsl	temp1
 		rol	temp2
 		lsl	YL
 		rol	YH
-		.endif
 set_new_duty_set:
 		; When off duty is short, skip complementary PWM; otherwise,
 		; compensate the off_duty time to account for the overhead.
@@ -1360,11 +1358,7 @@ wait_for_demag:
 		rcall	evaluate_rc
 		in	temp3, ACSR
 		eor	temp3, flags1
-		.if defined(HIGH_SIDE_PWM)
-		sbrs	temp3, ACO		; Check for opposite level (demagnetization)
-		.else
 		sbrc	temp3, ACO		; Check for opposite level (demagnetization)
-		.endif
 		rjmp	wait_for_demag
 wait_for_edge0:
 		rcall	load_timing
@@ -1378,11 +1372,7 @@ wait_for_edge0:
 		cpc	XH, ZH
 		brcs	wait_for_edge_fast_min
 		breq	wait_for_edge_fast
-.if ZC_CHECK_MAX < 256
 		cpi	XL, ZC_CHECK_MAX
-.else
-		cpi	XL, 255
-.endif
 		cpc	XH, ZH
 		brcs	wait_for_edge_below_max
 		ldi	XL, ZC_CHECK_MAX	; Limit to ZC_CHECK_MAX
@@ -1409,18 +1399,8 @@ wait_for_edge2:	sbrs	flags0, OCT1_PENDING
 		sbrc	flags1, EVAL_RC
 		rcall	evaluate_rc
 		in	temp3, ACSR
-.if 0
-		; Visualize comparator output on the flag pin
-		sbrc	temp3, ACO
-		nop
-		sbrs	temp3, ACO
-.endif
 		eor	temp3, flags1
-		.if defined(HIGH_SIDE_PWM)
-		sbrs	temp3, ACO
-		.else
 		sbrc	temp3, ACO
-		.endif
 		rjmp	wait_for_edge3
 		cp	XL, XH			; Not yet crossed
 		adc	XL, ZH			; Increment if not at zc_filter
