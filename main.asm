@@ -22,8 +22,6 @@
 
 .equ	MOTOR_ID	= 1	; MK-style I2C motor ID, or UART motor number
 
-.equ	COMP_PWM	= 1	; During PWM off, switch high side on (unsafe on some boards!)
-.equ	MOTOR_BRAKE	= 1	; Enable brake during neutral/idle ("motor drag" brake)
 .equ	MOTOR_REVERSE	= 1	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
 
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
@@ -275,7 +273,6 @@ defaults_w:
 ; pwm_*_high and pwm_again are called when the particular on/off cycle
 ; is longer than will fit in 8 bits. This is tracked in tcnt2h.
 
-.if MOTOR_BRAKE
 pwm_brake_on:
 		cpse	tcnt2h, ZH
 		rjmp	pwm_again
@@ -311,7 +308,6 @@ pwm_brake_off:
 		out	SREG, i_sreg
 		out	TCNT2, off_duty_l
 		reti
-.endif
 
 .if DEAD_TIME_HIGH > 7
 .equ	EXTRA_DEAD_TIME_HIGH = DEAD_TIME_HIGH - 7
@@ -320,7 +316,7 @@ pwm_brake_off:
 .endif
 
 pwm_on_fast_high:
-.if COMP_PWM && EXTRA_DEAD_TIME_HIGH > MAX_BUSY_WAIT_CYCLES
+.if EXTRA_DEAD_TIME_HIGH > MAX_BUSY_WAIT_CYCLES
 		in	i_sreg, SREG
 		dec	tcnt2h
 		brne	pwm_on_fast_high_again
@@ -345,7 +341,7 @@ pwm_again:
 		reti
 
 pwm_on:
-.if COMP_PWM
+
 		sbrc	flags2, A_FET
 		ApFET_off
 		sbrc	flags2, B_FET
@@ -371,7 +367,7 @@ pwm_on:
 		.equ	CPWM_OVERHEAD_HIGH = 7 + EXTRA_DEAD_TIME_HIGH
 		; Fall through
 	.endif
-.endif
+
 pwm_on_fast:
 		sbrc	flags2, A_FET
 		AnFET_on
@@ -403,7 +399,6 @@ pwm_off:
 		sbrc	flags2, C_FET
 		CnFET_off
 		out	TCNT2, off_duty_l	; 1 cycle
-		.if COMP_PWM
 		sbrc	flags2, SKIP_CPWM	; 2 cycles if skip, 1 cycle otherwise
 		reti
 		.if DEAD_TIME_LOW > 9
@@ -419,7 +414,6 @@ pwm_off:
 		BpFET_on
 		sbrc	flags2, C_FET
 		CpFET_on
-		.endif
 		reti				; 4 cycles
 
 .if high(pwm_off)
@@ -651,9 +645,7 @@ evaluate_rc:
 .if USE_ICP || USE_INT0
 evaluate_rc_puls:
 		cbr	flags1, (1<<EVAL_RC)+(1<<REVERSE)
-		.if MOTOR_BRAKE
 		sts	brake_want, ZH
-		.endif
 		movw	temp1, rx_l		; Atomic copy of rc pulse length
 		cpi2	temp1, temp2, MIN_RC_PULS, temp3
 		brcc	puls_long_enough
@@ -666,10 +658,8 @@ puls_long_enough:
 		brcc	puls_plus
 		; Fall through to stop/zero in no reverse case
 puls_zero_brake:
-		.if MOTOR_BRAKE
 		ldi	YL, 1
 		sts	brake_want, YL		; Set desired brake to 1 (neutral brake)
-		.endif
 puls_zero:	clr	YL
 		clr	YH
 		rjmp	rc_duty_set
@@ -914,7 +904,6 @@ set_new_duty11:
 set_new_duty_set:
 		; When off duty is short, skip complementary PWM; otherwise,
 		; compensate the off_duty time to account for the overhead.
-	.if COMP_PWM
 		set
 		ldi	temp4, pwm_on_fast	; Short off period: skip complementary PWM
 		cpse	temp2, ZH
@@ -923,7 +912,6 @@ set_new_duty_set:
 		brcs	set_new_duty21		; Off period < off-to-on cycle count plus interrupt overhead
 		clt				; Not short off period, unset SKIP_CPWM
 		sbiwx	temp1, temp2, CPWM_OVERHEAD_HIGH
-	.endif
 		ldi	temp4, pwm_on		; Off period < 0x100
 		cpse	temp2, ZH
 		ldi	temp4, pwm_on_high	; Off period >= 0x100
@@ -934,9 +922,7 @@ set_new_duty21:
 		cli				; Critical section (off_duty & flags together)
 		movw	off_duty_l, temp1	; Set new OFF duty for PWM interrupt
 		sts	pwm_on_ptr, temp4	; Set Next PWM ON interrupt vector
-		.if COMP_PWM
 		bld	flags2, SKIP_CPWM	; If to skip complementary PWM
-		.endif
 		sei
 		ret
 set_new_duty_full:
@@ -947,9 +933,7 @@ set_new_duty_zero:
 		; Power off
 		cbr	flags1, (1<<FULL_POWER)+(1<<POWER_ON)
 		ldi	temp4, pwm_off		; Skip the on phase entirely
-		.if COMP_PWM
 		set				; Skip complementary PWM
-		.endif
 		rjmp	set_new_duty21
 ;-----bko-----------------------------------------------------------------
 ; Multiply the 24-bit timing in temp1:temp2:temp3 by temp4 and add the top
@@ -1102,15 +1086,12 @@ i_rc_puls_rx:	rcall	evaluate_rc_init
 restart_control:
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
 		cbr	flags0, (1<<SET_DUTY)	; Do not yet set duty on input
-		.if MOTOR_BRAKE
 		sts	brake_active, ZH	; No active brake
-		.endif
 		GRN_on				; Green on while armed and idle or braking
 		RED_off
 wait_for_power_on_init:
 		sts	rct_boot, ZH
 
-		.if MOTOR_BRAKE
 		lds	temp3, brake_want
 		lds	temp4, brake_active
 		cp	temp3, temp4
@@ -1132,7 +1113,6 @@ wait_for_power_on_init:
 		clr	tcnt2h
 		clr	sys_control_l		; Abused as duty update divisor
 		outi	TCCR2, T2CLK, temp1	; Enable PWM, cleared later by switch_power_off
-		.endif
 
 wait_for_power_on:
 		wdr
@@ -1220,18 +1200,10 @@ run_reverse:
 		com2com1
 
 run6:
-		.if MOTOR_BRAKE
 		lds	temp1, brake_want
 		cpse	temp1, ZH
 		rjmp	run_to_brake
-		.endif
 		lds	temp1, goodies
-		.if !MOTOR_BRAKE
-		; If last commutation timed out and power is off, return to restart_control
-		cpi	temp1, 0
-		sbrs	flags1, POWER_ON
-		breq	run_to_brake
-		.endif
 		movw	YL, sys_control_l	; Each time TIMING_MAX is hit, sys_control is lsr'd
 		adiw	YL, 0			; If zero, try starting over (with powerskipping)
 		breq	restart_run
@@ -1301,7 +1273,6 @@ start_fail_beep:
 demag_timeout:
 		ldi	ZL, low(pwm_wdr)	; Stop PWM switching
 		; Interrupts will not turn on any FETs now
-		.if COMP_PWM
 		; Turn off complementary PWM if it was on,
 		; but leave on the high side commutation FET.
 		sbrc	flags2, A_FET
@@ -1310,7 +1281,6 @@ demag_timeout:
 		BpFET_off
 		sbrc	flags2, C_FET
 		CpFET_off
-		.endif
 		all_nFETs_off temp1
 		RED_on
 		; Skip power for the next commutation. Note that we can't
