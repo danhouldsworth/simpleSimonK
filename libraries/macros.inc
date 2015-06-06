@@ -392,9 +392,9 @@
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<B_FET)
-		.if COMP_PWM
+
 		CpFET_off
-		.endif
+
 		in	temp1, CnFET_port
 		CnFET_off
 		in	temp2, CnFET_port
@@ -409,9 +409,9 @@
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<C_FET)
-		.if COMP_PWM
+
 		BpFET_off
-		.endif
+
 		in	temp1, BnFET_port
 		BnFET_off
 		in	temp2, BnFET_port
@@ -442,9 +442,9 @@
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<A_FET)
-		.if COMP_PWM
+
 		BpFET_off
-		.endif
+
 		in	temp1, BnFET_port
 		BnFET_off
 		in	temp2, BnFET_port
@@ -459,9 +459,9 @@
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<B_FET)
-		.if COMP_PWM
+
 		ApFET_off
-		.endif
+
 		in	temp1, AnFET_port
 		AnFET_off
 		in	temp2, AnFET_port
@@ -492,9 +492,9 @@
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<C_FET)
-		.if COMP_PWM
+
 		ApFET_off
-		.endif
+
 		in	temp1, AnFET_port
 		AnFET_off
 		in	temp2, AnFET_port
@@ -509,9 +509,9 @@
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<A_FET)
-		.if COMP_PWM
+
 		CpFET_off
-		.endif
+
 		in	temp1, CnFET_port
 		CnFET_off
 		in	temp2, CnFET_port

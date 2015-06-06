@@ -27,10 +27,10 @@ clean:
 	-rm -f *.obj *.eep.hex *.eeprom *.hex *.cof
 
 ISP_flash:
-	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -U flash:w:$(TARGET).hex:i
+	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -U flash:w:main.hex:i
 
 PWM_flash:
-	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -U flash:w:$(TARGET).hex:i
+	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -U flash:w:main.hex:i
 
 ISP_read:
 	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
