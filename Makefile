@@ -4,7 +4,7 @@
 # Note#2 - SLAB_USBtoUART is the silicon labs driver that I use for the AfroESC programmer
 # Note#3 - To my knowledge, reading / setting fuses over PWM-pin bootloader is meaningless, but flash / prog mem can be done.
 
-SHELL = /bin/bash
+# SHELL = /bin/bash
 
 # TARGET = afro_nfet
 TARGET = afro_hv
@@ -26,15 +26,15 @@ all:
 clean:
 	-rm -f *.obj *.eep.hex *.eeprom *.hex *.cof
 
-upload_ISP:
+ISP_flash:
 	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -U flash:w:$(TARGET).hex:i
 
-upload_PWM:
+PWM_flash:
 	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -U flash:w:$(TARGET).hex:i
 
-read_ISP:
+ISP_read:
 	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
 
-read_PWM:
+# read_PWM:
 	# Note : To my knowledge, reading / setting fuses with PWM is meaningless, but flash / prog mem can be done.
-	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
+	# avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
