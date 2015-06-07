@@ -22,15 +22,15 @@
 
 .equ	MOTOR_ID	= 1	; MK-style I2C motor ID, or UART motor number
 
-.equ	MOTOR_REVERSE	= 1	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
+.equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
 
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 
 ; These might be a bit wide for most radios, but lines up with POWER_RANGE.
-.equ	STOP_RC_PULS	= 1060	; Stop motor at or below this pulse length
-.equ	FULL_RC_PULS	= 1860	; Full speed at or above this pulse length
-.equ	MAX_RC_PULS	= 1870	; Throw away any pulses longer than this
-.equ	MIN_RC_PULS	= 1050	; Throw away any pulses shorter than this
+.equ	STOP_RC_PULS	= 1100	; Stop motor at or below this pulse length
+.equ	FULL_RC_PULS	= 1900	; Full speed at or above this pulse length
+.equ	MAX_RC_PULS	= 2000	; Throw away any pulses longer than this
+.equ	MIN_RC_PULS	= 1000	; Throw away any pulses shorter than this
 .equ	MID_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS) / 2
 
 .equ	CPU_MHZ		= F_CPU / 1000000
