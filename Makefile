@@ -28,15 +28,21 @@ all:
 clean:
 	-rm -f *.obj *.eep.hex *.eeprom *.hex *.cof
 
+USB_flash:
+	avrdude -c usbasp -P usb -p m8 -U flash:w:main.hex:i
+
+USB_read:
+	avrdude -c usbasp -P usb -p m8 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
+
 ISP_flash:
 	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -U flash:w:main.hex:i
-
-PWM_flash:
-	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -U flash:w:main.hex:i
 
 ISP_read:
 	avrdude -c avrisp2 -p m8 -P /dev/tty.usbmodem00065771 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
 
-# read_PWM:
+PWM_flash:
+	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -U flash:w:main.hex:i
+
+PWM_read:
 	# Note : To my knowledge, reading / setting fuses with PWM is meaningless, but flash / prog mem can be done.
-	# avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h
+	avrdude -c stk500v2 -p m8 -P /dev/tty.SLAB_USBtoUART -b 9600 -v -U flash:r:flash.hex:i -U eeprom:r:eeprom.hex:i -U lfuse:r:-:h -U hfuse:r:-:h

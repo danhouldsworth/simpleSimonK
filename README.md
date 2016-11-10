@@ -1,3 +1,41 @@
+# EDIT - After 18 months away... Revision notes:
+
+1. Toolchain for make (El Capitan versions are in main library)
+```
+brew install avra
+```
+2. Toolchain for flash
+```
+brew install avrdude
+```
+
+## 3. Physical interface
+
+### 3.1 Afro PWM/USB dongle. 
+Requires SiLabs driver. DMG installer : http://www.silabs.com/products/mcu/pages/usbtouartbridgevcpdrivers.aspx#mac
+
+Great for ESC where don't have access to chip. // Still relevant with direct soldering?
+```
+avrdude: AVR device initialized and ready to accept instructions
+
+Reading |                                                    | 0% 0.00savrdude: stk500v2_command(): command failed
+avrdude: stk500isp_read_byte(): timeout/error communicating with programmer
+```
+### 3.2 USBASB stick. 
+https://www.amazon.co.uk/3-3V-USBasp-Downloader-Programmer-Adapter/dp/B00AVRHVPO/ref=sr_1_3?ie=UTF8&qid=1478790156&sr=8-3&keywords=isp+programmer
+https://hobbyking.com/en_us/atmel-atmega-socket-firmware-flashing-tool.html
+Use external LiPo (check charged and within Vrange) to power board
+WORKS! Great for ESC m8 where have access
+### 3.3 ISP (external board : Pololu PGM03A) 
+Mac-->ISP via USB Mini-Type B cable
+6Pin Cable connects to standard ISP plugs (Arduino style)
+Extra Board bus-->Atmel 5v connection
+WORKS!
+### 3.4 USBASB --> 10->4 converter --> 6pin ISP
+No drivers needed.
+No external power needed (for 6PIN ISP)
+Switch 10pin cable between the 6PIN and the m8 adapter
+
 # simpleSimonK
 
 ## A learning project to create a simplified version of the popular SimonK ESC for my bespoke setup
