@@ -32,8 +32,8 @@ avrdude: stk500isp_read_byte(): timeout/error communicating with programmer
 * No drivers needed.
 * No external power needed (for 6PIN ISP)
 * Switch 10pin cable between the 6PIN and the m8 adapter
-...
-...
+
+#
 
 # simpleSimonK
 
