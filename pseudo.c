@@ -14,4 +14,7 @@
 // Scale the pulse calcs
 // Neatural appears redundent (as we don't have reverse)
 
+// * We should calculate (puls_find_multiplicand:) manually, as would cut out quite a bit of code, progmem, defs, and SRAM
+// * Also will understand it better
+
 
