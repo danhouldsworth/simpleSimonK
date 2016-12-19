@@ -31,7 +31,6 @@
 .equ	FULL_RC_PULS	= 1900	; Full speed at or above this pulse length
 .equ	MAX_RC_PULS	= 2000	; Throw away any pulses longer than this
 .equ	MIN_RC_PULS	= 1000	; Throw away any pulses shorter than this
-.equ	MID_RC_PULS	= (STOP_RC_PULS + FULL_RC_PULS) / 2
 
 .equ	CPU_MHZ		= F_CPU / 1000000
 .equ	DEAD_TIME_LOW	= DEAD_LOW_NS * CPU_MHZ / 1000
@@ -174,15 +173,11 @@ brake_sub:	.byte	1	; Brake speed subtrahend (power of two)
 brake_want:	.byte	1	; Type of brake desired
 brake_active:	.byte	1	; Type of brake active
 ;**** **** **** **** ****
-; The following entries are RAM settings (previously block-copied from/to EEPROM)
-RAM_sig_l:	.byte	1
-RAM_sig_h:	.byte	1
-puls_high_l:	.byte	1	; -,
-puls_high_h:	.byte	1	;  |
-puls_low_l:	.byte	1	;  |- saved pulse lengths during throttle calibration
-puls_low_h:	.byte	1	;  |  (order used by rc_prog)
-puls_neutral_l:	.byte	1	;  |
-puls_neutral_h:	.byte	1	; -'
+; The following entries are RAM settings
+puls_high_l:	.byte	1	;
+puls_high_h:	.byte	1	;
+puls_low_l:	.byte	1	;
+puls_low_h:	.byte	1	;
 RAM_end:	.byte	1
 ;-----bko-----------------------------------------------------------------
 ;**** **** **** **** ****
@@ -215,11 +210,8 @@ RAM_end:	.byte	1
 		reti		; spmc_int	SPMaddr =$012	; SPM complete Interrupt Vector Address
 
 defaults_w:
-	.db 0x00,0x00
 	.db byte1(FULL_RC_PULS * CPU_MHZ), byte2(FULL_RC_PULS * CPU_MHZ)
 	.db byte1(STOP_RC_PULS * CPU_MHZ), byte2(STOP_RC_PULS * CPU_MHZ)
-	.db byte1(MID_RC_PULS * CPU_MHZ), byte2(MID_RC_PULS * CPU_MHZ)
-
 
 ;-- Instruction extension macros -----------------------------------------
 ;
@@ -559,7 +551,7 @@ wait_ret:	ret
 ;-- RAM functions -----------------------------------------------
 ; Interrupts must be disabled to avoid Z conflicts and content changes.
 set_defaults_to_RAM:
-		ldi2	YL, YH, RAM_sig_l
+		ldi2	YL, YH, puls_high_l
 		ldi	ZL, low(defaults_w << 1)
 RAM_copy_loop1:	lpm	temp1, Z+
 		st	Y+, temp1
