@@ -1435,9 +1435,7 @@ clear_loop1:	cp	ZL, r0
 		cpc	ZH, r0
 		brne	clear_loop		; Leaves with all registers (r0 through ZH) at 0
 
-	; Save original OSCCAL and reset cause
-		in	temp1, OSCCAL
-		sts	orig_osccal, temp1
+	; Save reset cause
 		in	temp7, MCUCSR		; Store reset reason in register not used for a while
 		out	MCUCSR, ZH
 
