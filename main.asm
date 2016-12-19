@@ -138,7 +138,7 @@
 .dseg				; DATA segment
 .org SRAM_START
 
-orig_osccal:	.byte	1	; original OSCCAL value
+
 goodies:	.byte	1	; Number of rounds without timeout
 powerskip:	.byte	1	; Skip power through this number of steps
 ocr1ax:		.byte	1	; 3rd byte of OCR1A
@@ -164,11 +164,6 @@ rc_duty_l:	.byte	1	; desired duty cycle
 rc_duty_h:	.byte	1
 fwd_scale_l:	.byte	1	; 16.16 multipliers to scale input RC pulse to POWER_RANGE
 fwd_scale_h:	.byte	1
-rev_scale_l:	.byte	1
-rev_scale_h:	.byte	1
-neutral_l:	.byte	1	; Offset for neutral throttle (in CPU_MHZ)
-neutral_h:	.byte	1
-motor_count:	.byte	1	; Motor number for serial control
 brake_sub:	.byte	1	; Brake speed subtrahend (power of two)
 brake_want:	.byte	1	; Type of brake desired
 brake_active:	.byte	1	; Type of brake active
@@ -612,8 +607,8 @@ evaluate_rc_puls:
 		brcc	puls_long_enough
 		ret
 puls_long_enough:
-		lds	YL, neutral_l
-		lds	YH, neutral_h
+		lds	YL, puls_low_l
+		lds	YH, puls_low_h
 		sub	temp1, YL		; Offset input to neutral
 		sbc	temp2, YH
 		brcc	puls_plus
@@ -650,8 +645,6 @@ rc_no_set_duty:	ldi	temp1, 0xff
 puls_scale:
 		lds	temp1, puls_low_l
 		lds	temp2, puls_low_h
-		sts	neutral_l, temp1
-		sts	neutral_h, temp2
 	; Find the distance to full throttle and fit it to match the
 	; distance between FULL_RC_PULS and STOP_RC_PULS by walking
 	; for the lowest 16.16 multiplier that just brings us in range.
