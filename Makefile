@@ -16,10 +16,7 @@ all:
 	#                                                                                           *
 	#                                                                                           *
 	# Warning ! : Careful with Afros - the ~HV.inc burned the new 4-6s which work on ~nfet.inc  *
-	# Warning#1 : this should now make using AVRA on OS X Mavericks but untested as yet 	    *
-	# Warning#2 : I've overhauled the Makefile considerably! so must test soon...	     	    *
 	# Warning#3 : Using a modified version of m8def.inc to make Pragma use (or lack of) clear   *
-	# Warning#4 : Recently stripped out huge amounts of main.asm code so need to field test!    *
 	#                                                                                           *
 	#                                                                                           *
 	#********************************************************************************************

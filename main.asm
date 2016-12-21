@@ -27,10 +27,10 @@
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 
 ; These might be a bit wide for most radios, but lines up with POWER_RANGE.
-.equ	STOP_RC_PULS	= 1100	; Stop motor at or below this pulse length
-.equ	FULL_RC_PULS	= 1900	; Full speed at or above this pulse length
-.equ	MAX_RC_PULS	= 2000	; Throw away any pulses longer than this
-.equ	MIN_RC_PULS	= 1000	; Throw away any pulses shorter than this
+.equ	STOP_RC_PULS	= 1000	; Stop motor at or below this pulse length
+.equ	FULL_RC_PULS	= 2000	; Full speed at or above this pulse length
+.equ	MAX_RC_PULS	= 2200	; Throw away any pulses longer than this
+.equ	MIN_RC_PULS	= 800	; Throw away any pulses shorter than this
 
 .equ	CPU_MHZ		= F_CPU / 1000000
 .equ	DEAD_TIME_LOW	= DEAD_LOW_NS * CPU_MHZ / 1000
@@ -40,7 +40,7 @@
 .equ	MIN_DUTY	= 56 * CPU_MHZ / 16
 
 ; Number of PWM steps (too high and PWM frequency drops into audible range)
-.equ	POWER_RANGE	= 800 * CPU_MHZ / 16 + MIN_DUTY
+.equ	POWER_RANGE	= 1000 * CPU_MHZ / 16 + MIN_DUTY
 
 .equ	MAX_POWER	= (POWER_RANGE-1)
 .equ	PWR_COOL_START	= (POWER_RANGE/24) ; Power limit while starting to reduce heating
