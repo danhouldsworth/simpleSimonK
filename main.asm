@@ -578,7 +578,7 @@ evaluate_rc_puls:
 		cbr	flags1, (1<<EVAL_RC)
 		sts	brake_want, ZH
 		movw	temp1, rx_l		; Atomic copy of rc pulse length
-		cpi2	temp1, temp2, MIN_RC_PULS, temp3
+		cpi2	temp1, temp2, MIN_RC_PULS * CPU_MHZ, temp3
 		brcc	puls_long_enough
 		ret
 puls_long_enough:
