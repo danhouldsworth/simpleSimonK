@@ -5,7 +5,7 @@
 ;--------------------------------------------------------------------------
 
 ;-- Board -----------------------------------------------------------------
-.include "hardware/afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM)
+.include "afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM)
 ;--------------------------------------------------------------------------
 
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
@@ -58,7 +58,7 @@
 .equ	ZC_CHECK_MIN	= 3
 
 .equ	T0CLK		= (1<<CS01)	; clk/8 == 2MHz
-.equ	T1CLK		= (1<<CS10) | (USE_ICP<<ICES1) | (USE_ICP<<ICNC1)	; clk/1 == 16MHz
+.equ	T1CLK		= (1<<CS10) | (1<<ICES1) | (1<<ICNC1)	; clk/1 == 16MHz
 .equ	T2CLK		= (1<<CS20)	; clk/1 == 16MHz
 
 
@@ -402,16 +402,10 @@ t1ovfl_int2:	lds	i_temp1, rct_boot
 ; (see "Accessing 16-bit registers" in the Atmel documentation)
 ; icp1 = rc pulse input, if enabled
 rcp_int:
-	.if USE_ICP
 		in	i_temp1, ICR1L		; get captured timer values
 		in	i_temp2, ICR1H
 		in	i_sreg, TCCR1B		; abuse i_sreg to hold value
 		sbrs	i_sreg, ICES1		; evaluate edge of this interrupt
-	.else
-		in	i_temp1, TCNT1L		; get timer1 values
-		in	i_temp2, TCNT1H
-		sbis	PIND, rcp_in	; evaluate edge of this interrupt
-	.endif
 		rjmp	falling_edge
 rising_edge:
 		in	i_sreg, SREG
