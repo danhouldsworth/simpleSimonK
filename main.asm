@@ -5,22 +5,8 @@
 ;--------------------------------------------------------------------------
 
 ;-- Board -----------------------------------------------------------------
-;
-#if defined(afro_nfet_esc)
 .include "hardware/afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM)
-#elif defined(afro_hv_esc)
-.include "hardware/afro_hv.inc"		; Afro 3-8s ESC				(ICP PWM)
-#elif defined(tgy_esc)
-.include "hardware/tgy.inc"		; TowerPro/Turnigy Basic/Plush type 2 	(INT0 PWM)
-#elif defined(bs_nfet_esc)
-.include "hardware/bs_nfet.inc"		; BlueSeries / Armattan 6s 40amp  	(INT0 PWM)
-#else
-#error "Unrecognized board type."
-#endif
-;
 ;--------------------------------------------------------------------------
-
-.equ	MOTOR_ID	= 1	; MK-style I2C motor ID, or UART motor number
 
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
 
@@ -72,7 +58,7 @@
 .equ	ZC_CHECK_MIN	= 3
 
 .equ	T0CLK		= (1<<CS01)	; clk/8 == 2MHz
-.equ	T1CLK		= (1<<CS10)+(USE_ICP<<ICES1)+(USE_ICP<<ICNC1)	; clk/1 == 16MHz
+.equ	T1CLK		= (1<<CS10) | (USE_ICP<<ICES1) | (USE_ICP<<ICNC1)	; clk/1 == 16MHz
 .equ	T2CLK		= (1<<CS20)	; clk/1 == 16MHz
 
 
@@ -102,7 +88,7 @@
 ;	.equ	EEPROM_RESET	= 4	; if set, reset EEPROM
 ;	.equ	EEPROM_WRITE	= 5	; if set, save settings to EEPROM
 ;	.equ	UART_SYNC	= 6	; if set, we are waiting for our serial throttle byte
-	.equ	NO_CALIBRATION	= 7	; if set, disallow calibration (unsafe reset cause)
+;	.equ	NO_CALIBRATION	= 7	; if set, disallow calibration (unsafe reset cause)
 .def	flags1		= r17	; state flags
 	.equ	POWER_ON	= 0	; if set, switching fets is enabled
 	.equ	FULL_POWER	= 1	; 100% on - don't switch off, but do OFF_CYCLE working
@@ -111,12 +97,12 @@
 	.equ	EVAL_RC		= 4	; if set, evaluate rc command while waiting for OCT1
 	.equ	ACO_EDGE_HIGH	= 5	; if set, looking for ACO high - same bit position as ACO
 	.equ	STARTUP		= 6	; if set, startup-phase is active
-	.equ	REVERSE		= 7	; if set, do reverse commutation
+;	.equ	REVERSE		= 7	; if set, do reverse commutation
 .def	flags2		= r18
 	.equ	A_FET		= 0	; if set, A FET is being PWMed
 	.equ	B_FET		= 1	; if set, B FET is being PWMed
 	.equ	C_FET		= 2	; if set, C FET is being PWMed
-	.equ	ALL_FETS	= (1<<A_FET)+(1<<B_FET)+(1<<C_FET)
+	.equ	ALL_FETS	= (1 << A_FET) | (1 << B_FET) | (1 << C_FET)
 	.equ	SKIP_CPWM	= 7	; if set, skip complementary PWM (for short off period)
 ;.def			= r19
 .def	i_temp1		= r20		; interrupt temporary
@@ -555,17 +541,6 @@ RAM_copy_loop1:	lpm	temp1, Z+
 		ret
 
 ;-----bko-----------------------------------------------------------------
-; Set the oscillator calibration for 8MHz operation, or set it to 0xff for
-; approximately 16MHz operation even without an external oscillator. This
-; should be safe as long as we restore it during EEPROM accesses. This
-; will have no effect on boards with external oscillators, except that
-; the EEPROM still uses the internal oscillator (at 1MHz).
-osccal_set:
-		ldi	temp1, 0xff		; Almost 16MHz
-		out	OSCCAL, temp1
-		ret
-
-;-----bko-----------------------------------------------------------------
 ; Multiply temp1:temp2 by temp3:temp4 and add high 16 bits of result to Y.
 ; Clobbers temp5, temp6, and leaves the lower byte in temp7.
 mul_y_12x34:
@@ -600,7 +575,7 @@ evaluate_rc:
 ; Fall through to evaluate_rc_puls
 ;-----bko-----------------------------------------------------------------
 evaluate_rc_puls:
-		cbr	flags1, (1<<EVAL_RC)+(1<<REVERSE)
+		cbr	flags1, (1<<EVAL_RC)
 		sts	brake_want, ZH
 		movw	temp1, rx_l		; Atomic copy of rc pulse length
 		cpi2	temp1, temp2, MIN_RC_PULS, temp3
@@ -855,11 +830,11 @@ set_new_duty21:
 		ret
 set_new_duty_full:
 		; Full power
-		sbr	flags1, (1<<FULL_POWER)+(1<<POWER_ON)
+		sbr	flags1, (1<<FULL_POWER) | (1<<POWER_ON)
 		rjmp	set_new_duty_set
 set_new_duty_zero:
 		; Power off
-		cbr	flags1, (1<<FULL_POWER)+(1<<POWER_ON)
+		cbr	flags1, (1<<FULL_POWER) | (1<<POWER_ON)
 		ldi	temp4, pwm_off		; Skip the on phase entirely
 		set				; Skip complementary PWM
 		rjmp	set_new_duty21
@@ -903,7 +878,7 @@ set_timing_degrees:
 set_ocr1a_abs:
 		in	temp4, TIMSK
 		mov	temp5, temp4
-		cbr	temp4, (1<<TOIE1)+(1<<OCIE1A)
+		cbr	temp4, (1<<TOIE1) | (1<<OCIE1A)
 		out	TIMSK, temp4		; Disable TOIE1 and OCIE1A temporarily
 		ldi	temp4, (1<<OCF1A)
 		cli
@@ -970,7 +945,7 @@ control_disarm:
 		rcall	puls_scale
 
 	; Enable timer interrupts (we only do this late to improve beep quality)
-		ldi	temp1, (1<<TOIE1)+(1<<OCIE1A)+(1<<TOIE2)
+		ldi	temp1, (1<<TOIE1) | (1<<OCIE1A) | (1<<TOIE2)
 		out	TIFR, temp1		; Clear TOIE1, OCIE1A, and TOIE2 flags
 		out	TIMSK, temp1		; Enable t1ovfl_int, t1oca_int, t2ovfl_int
 
@@ -1089,29 +1064,8 @@ start_from_running:
 ;-----bko-----------------------------------------------------------------
 ; **** running control loop ****
 
-run1:		.if MOTOR_REVERSE
-		sbrs	flags1, REVERSE
-		.else
-		sbrc	flags1, REVERSE
-		.endif
-		rjmp	run_reverse
-
-run_forward:
-		rcall	wait_for_high
-		com1com2
-		rcall	wait_for_low
-		com2com3
-		rcall	wait_for_high
-		com3com4
-		rcall	wait_for_low
-		com4com5
-		rcall	wait_for_high
-		com5com6
-		rcall	wait_for_low
-		com6com1
-		rjmp	run6
-
-run_reverse:
+run1:
+	.if MOTOR_REVERSE
 		rcall	wait_for_low
 		com1com6
 		rcall	wait_for_high
@@ -1124,8 +1078,21 @@ run_reverse:
 		com3com2
 		rcall	wait_for_high
 		com2com1
+	.else
+		rcall	wait_for_high
+		com1com2
+		rcall	wait_for_low
+		com2com3
+		rcall	wait_for_high
+		com3com4
+		rcall	wait_for_low
+		com4com5
+		rcall	wait_for_high
+		com5com6
+		rcall	wait_for_low
+		com6com1
+	.endif
 
-run6:
 		lds	temp1, brake_want
 		cpse	temp1, ZH
 		rjmp	run_to_brake
@@ -1446,7 +1413,7 @@ clear_loop1:	cp	ZL, r0
 		out	TCCR2, ZH		; timer2: PWM, stopped
 
 	; Enable watchdog (WDTON may be set or unset)
-		ldi	temp1, (1<<WDCE)+(1<<WDE)
+		ldi	temp1, (1<<WDCE) | (1<<WDE)
 		out	WDTCR, temp1
 		ldi	temp1, (1<<WDE)		; Fastest option: ~16.3ms timeout
 		out	WDTCR, temp1
@@ -1454,9 +1421,6 @@ clear_loop1:	cp	ZL, r0
 	; Wait for power to settle -- this must be no longer than 64ms
 	; (with 64ms delayed start fuses) for i2c V2 protocol detection
 		rcall	wait30ms		; Running at unadjusted speed(!)
-
-	; Set the Oscillator
-		rcall osccal_set
 
 	; Copy the default settings (stored as double-bytes to RAM)
 		rcall set_defaults_to_RAM
@@ -1479,7 +1443,6 @@ init_no_porf:
 		rjmp	init_no_borf
 		rcall	beep_f3			; "dead cellphone"
 		rcall	beep_f1
-		sbr	flags0, (1<<NO_CALIBRATION)
 		rjmp	control_start
 init_no_borf:
 		sbrs	temp7, EXTRF		; External reset
