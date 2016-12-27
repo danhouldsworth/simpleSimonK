@@ -106,14 +106,10 @@
 		ldi	@2, byte3(@3)
 .endmacro
 
-; Immediate out to any port via temp1 (memory-mapped if necessary taking extra cycle)
+; Immediate out to any port via temp1 (all reg on mega8 are <0x3f)
 .macro outi
 	ldi	temp1, @1
-	.if @0 < 64
-		out	@0, temp1
-	.else
-		sts	@0, temp1
-	.endif
+	out	@0, temp1
 .endmacro
 
 ;-- FET driving macros ---------------------------------------------------
