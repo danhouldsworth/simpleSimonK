@@ -104,9 +104,9 @@
 	.equ	C_FET		= 2	; if set, C FET is being PWMed
 	.equ	ALL_FETS	= (1 << A_FET) | (1 << B_FET) | (1 << C_FET)
 	.equ	SKIP_CPWM	= 7	; if set, skip complementary PWM (for short off period)
-;.def			= r19
-.def	i_temp1		= r20		; interrupt temporary
-.def	i_temp2		= r21		; interrupt temporary
+.def	i_temp1		= r19		; interrupt temporary
+.def	i_temp2		= r20		; interrupt temporary
+.def	i_temp3		= r21		; interrupt temporary
 .def	temp3		= r22		; main temporary (L)
 .def	temp4		= r23		; main temporary (H)
 .def	temp1		= r24		; main temporary (L), adiw-capable
@@ -171,7 +171,7 @@ RAM_end:	.byte	1
 ; When multiple interrupts are pending, the vectors are executed from top
 ; (ext_int0) to bottom.
 		rjmp reset	; reset
-		rjmp rcp_int	; ext_int0	INT0addr=$001	; External Interrupt0 Vector Address
+		reti		; ext_int0	INT0addr=$001	; External Interrupt0 Vector Address
 		reti		; ext_int1	INT1addr=$002	; External Interrupt1 Vector Address
 		reti		; t2oc_int	OC2addr =$003	; Output Compare2 Interrupt Vector Addre
 		ijmp		; t2ovfl_int	OVF2addr=$004	; Overflow2 Interrupt Vector Address
@@ -404,8 +404,8 @@ t1ovfl_int2:	lds	i_temp1, rct_boot
 rcp_int:
 		in	i_temp1, ICR1L		; get captured timer values
 		in	i_temp2, ICR1H
-		in	i_sreg, TCCR1B		; abuse i_sreg to hold value
-		sbrs	i_sreg, ICES1		; evaluate edge of this interrupt
+		in	i_temp3, TCCR1B
+		sbrs	i_temp3, ICES1		; evaluate edge of this interrupt
 		rjmp	falling_edge
 rising_edge:
 		in	i_sreg, SREG
