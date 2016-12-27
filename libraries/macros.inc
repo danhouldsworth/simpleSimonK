@@ -124,14 +124,10 @@
 	.endif
 .endmacro
 
-; Immediate out to any port (possibly via @2 as a temporary)
+; Immediate out to port via temp1
 .macro outi
-	.if @1
-		ldi	@2, @1
-		outr	@0, @2
-	.else
-		outr	@0, ZH
-	.endif
+	ldi	temp1, @1
+	outr	@0, temp1
 .endmacro
 
 ;-- FET driving macros ---------------------------------------------------

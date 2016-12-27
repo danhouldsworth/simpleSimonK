@@ -1014,7 +1014,7 @@ wait_for_power_on_init:
 		ldi	ZL, low(pwm_brake_off)	; Enable PWM brake mode
 		clr	tcnt2h
 		clr	sys_control_l		; Abused as duty update divisor
-		outi	TCCR2, T2CLK, temp1	; Enable PWM, cleared later by switch_power_off
+		outi	TCCR2, T2CLK		; Enable PWM, cleared later by switch_power_off
 
 wait_for_power_on:
 		wdr
@@ -1059,7 +1059,7 @@ start_from_running:
 		sts	powerskip, temp1	; see if motor is running, and align to it.
 		ldi	temp1, ENOUGH_GOODIES	; If we can follow without a timeout, do not
 		sts	goodies, temp1		; continue in startup mode (long ZC filtering).
-		outi	TCCR2, T2CLK, temp1	; Enable PWM (ZL has been set to pwm_wdr)
+		outi	TCCR2, T2CLK		; Enable PWM (ZL has been set to pwm_wdr)
 
 
 ;-----bko-----------------------------------------------------------------
@@ -1401,16 +1401,16 @@ clear_loop1:	cp	ZL, r0
 		out	MCUCSR, ZH
 
 	; Initialize ports
-		outi	PORTB, INIT_PB, temp1
-		outi	DDRB, DIR_PB, temp1
-		outi	PORTC, INIT_PC, temp1
-		outi	DDRC, DIR_PC, temp1
-		outi	PORTD, INIT_PD, temp1
-		outi	DDRD, DIR_PD, temp1
+		outi	PORTB, INIT_PB
+		outi	DDRB, DIR_PB
+		outi	PORTC, INIT_PC
+		outi	DDRC, DIR_PC
+		outi	PORTD, INIT_PD
+		outi	DDRD, DIR_PD
 
 	; Start timers except output PWM
-		outi	TCCR0, T0CLK, temp1	; timer0: beep control, delays
-		outi	TCCR1B, T1CLK, temp1	; timer1: commutation timing, RC pulse measurement
+		outi	TCCR0, T0CLK		; timer0: beep control, delays
+		outi	TCCR1B, T1CLK		; timer1: commutation timing, RC pulse measurement
 		out	TCCR2, ZH		; timer2: PWM, stopped
 
 	; Enable watchdog (WDTON may be set or unset)
