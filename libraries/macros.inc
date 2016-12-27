@@ -106,28 +106,14 @@
 		ldi	@2, byte3(@3)
 .endmacro
 
-; Register out to any address (memory-mapped if necessary)
-.macro outr
-	.if @0 < 64
-		out	@0, @1
-	.else
-		sts	@0, @1
-	.endif
-.endmacro
-
-; Register in from any address (memory-mapped if necessary)
-.macro inr
-	.if @1 < 64
-		in	@0, @1
-	.else
-		lds	@0, @1
-	.endif
-.endmacro
-
-; Immediate out to port via temp1
+; Immediate out to any port via temp1 (memory-mapped if necessary taking extra cycle)
 .macro outi
 	ldi	temp1, @1
-	outr	@0, temp1
+	.if @0 < 64
+		out	@0, temp1
+	.else
+		sts	@0, temp1
+	.endif
 .endmacro
 
 ;-- FET driving macros ---------------------------------------------------
