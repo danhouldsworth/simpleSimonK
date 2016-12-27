@@ -555,20 +555,7 @@ mul_y_12x34:
 
 
 ;-----bko-----------------------------------------------------------------
-; Unlike the normal evaluate_rc, we look here for programming mode (pulses
-; oscillator drift. If we are running on a board without an external
-; crystal/resonator/oscillator, the internal RC oscillator must be used,
-; which can drift significantly with temperature and voltage. So, we must
-; use some margins while calibrating. The internal RC speeds up when cold,
-; causing arming problems if the learned pulse is too low. Likewise, the
-; internal RC slows down when hot, making it impossible to reach full
-; throttle.
-evaluate_rc_init:
-; These routines may clobber temp* and Y, but not X.
 evaluate_rc:
-; Fall through to evaluate_rc_puls
-;-----bko-----------------------------------------------------------------
-evaluate_rc_puls:
 		cbr	flags1, (1<<EVAL_RC)
 		sts	brake_want, ZH
 		movw	temp1, rx_l		; Atomic copy of rc pulse length
@@ -948,8 +935,7 @@ control_disarm:
 		rcp_int_rising_edge temp1
 		rcp_int_enable temp1
 
-	; Wait for one of the input sources to give arming input
-
+	; Wait for arming input
 i_rc_puls1:	clr	rc_timeout
 		cbr	flags1, (1<<EVAL_RC)
 		sts	rct_boot, ZH
@@ -957,7 +943,7 @@ i_rc_puls2:	wdr
 		sbrc	flags1, EVAL_RC
 		rjmp	i_rc_puls_rx
 		rjmp	i_rc_puls2
-i_rc_puls_rx:	rcall	evaluate_rc_init
+i_rc_puls_rx:	rcall	evaluate_rc
 		lds	YL, rc_duty_l
 		lds	YH, rc_duty_h
 		adiw	YL, 0			; Test for zero
