@@ -130,7 +130,6 @@ powerskip:	.byte	1	; Skip power through this number of steps
 ocr1ax:		.byte	1	; 3rd byte of OCR1A
 tcnt1x:		.byte	1	; 3rd byte of TCNT1
 pwm_on_ptr:	.byte	1	; Next PWM ON vector
-rct_boot:	.byte	1	; Counter which increments while rc_timeout is 0 to jump to boot loader
 last_tcnt1_l:	.byte	1	; last timer1 value
 last_tcnt1_h:	.byte	1
 last_tcnt1_x:	.byte	1
@@ -195,11 +194,8 @@ defaults_w:
 	.db byte1(STOP_RC_PULS * CPU_MHZ), byte2(STOP_RC_PULS * CPU_MHZ)
 
 ;-- Instruction extension macros -----------------------------------------
-;
-.include "libraries/macros.inc"
-;
+.include "macros.inc"
 ;--------------------------------------------------------------------------
-
 
 ;-----bko-----------------------------------------------------------------
 ; Timer2 overflow interrupt (output PWM) -- the interrupt vector actually
@@ -387,14 +383,10 @@ t1ovfl_int:	in	i_sreg, SREG
 		andi	i_temp1, 15			; Every 16 overflows
 		brne	t1ovfl_int1
 		tst	rc_timeout
-		breq	t1ovfl_int2
+		breq	t1ovfl_int1
 		dec	rc_timeout
 t1ovfl_int1:	out	SREG, i_sreg
 		reti
-t1ovfl_int2:	lds	i_temp1, rct_boot
-		inc	i_temp1
-		sts	rct_boot, i_temp1
-		rjmp	t1ovfl_int1
 ;-----bko-----------------------------------------------------------------
 ; NOTE: This interrupt uses the 16-bit atomic timer read/write register
 ; by reading TCNT1L and TCNT1H, so this interrupt must be disabled before
@@ -938,7 +930,6 @@ control_disarm:
 	; Wait for arming input
 i_rc_puls1:	clr	rc_timeout
 		cbr	flags1, (1<<EVAL_RC)
-		sts	rct_boot, ZH
 i_rc_puls2:	wdr
 		sbrc	flags1, EVAL_RC
 		rjmp	i_rc_puls_rx
@@ -972,8 +963,6 @@ restart_control:
 		GRN_on				; Green on while armed and idle or braking
 		RED_off
 wait_for_power_on_init:
-		sts	rct_boot, ZH
-
 		lds	temp3, brake_want
 		lds	temp4, brake_active
 		cp	temp3, temp4
