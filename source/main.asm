@@ -4,8 +4,71 @@
 ;
 ;--------------------------------------------------------------------------
 
-;-- Board -----------------------------------------------------------------
-.include "afro_nfet.inc"	; AfroESC 3 with all nFETs 		(ICP PWM)
+;-- Device ----------------------------------------------------------------
+.include "m8def.inc"
+;--------------------------------------------------------------------------
+
+;-- AFRO nFET Hardware ----------------------------------------------------
+.equ	F_CPU		= 16000000
+.equ	MOTOR_ADVANCE	= 15	; Degrees of timing advance (0 - 30, 30 meaning no delay)
+
+;*********************
+; PORT B definitions *
+;*********************
+;.equ			= 7
+;.equ			= 6
+;.equ			= 5	(sck)
+;.equ			= 4	(miso)
+;.equ			= 3	(mosi)
+.equ	BpFET		= 2	;o
+.equ	CpFET		= 1	;o
+.equ	rcp_in		= 0	;ICP1 r/c pulse input
+
+.equ	INIT_PB		= (1 << BpFET) | (1 << CpFET)
+.equ	DIR_PB		= (1 << BpFET) | (1 << CpFET)
+
+;*********************
+; PORT C definitions *
+;*********************
+;.equ	mux_voltage	= 7	; ADC7 voltage input (18k from Vbat, 3.3k to gnd, 10.10V -> 1.565V at ADC7)
+;.equ	mux_temperature	= 6	; ADC6 temperature input (3.3k from +5V, 10k NTC to gnd)
+;.equ	i2c_clk		= 5	; ADC5/SCL
+;.equ	i2c_data	= 4	; ADC4/SDA
+.equ	red_led		= 3	; o
+.equ	green_led	= 2	; o
+.equ	mux_b		= 1	; ADC1 phase input
+.equ	mux_a		= 0	; ADC0 phase input
+
+.equ	INIT_PC		= 0
+.equ	DIR_PC		= 0
+
+.MACRO RED_on
+	sbi	DDRC, red_led
+.ENDMACRO
+.MACRO RED_off
+	cbi	DDRC, red_led
+.ENDMACRO
+.MACRO GRN_on
+	sbi	DDRC, green_led
+.ENDMACRO
+.MACRO GRN_off
+	cbi	DDRC, green_led
+.ENDMACRO
+
+;*********************
+; PORT D definitions *
+;*********************
+;.equ	mux_c		= 7 (comparator AN1)
+;.equ	sense_star	= 6 (comparator AN0)
+.equ	CnFET		= 5
+.equ	BnFET		= 4
+.equ	AnFET		= 3
+.equ	ApFET		= 2
+;.equ	txd		= 1
+;.equ	rxd		= 0
+
+.equ	INIT_PD		= (1 << ApFET)
+.equ	DIR_PD		= (1 << AnFET) | (1 << BnFET) | (1 << CnFET) | (1 << ApFET)
 ;--------------------------------------------------------------------------
 
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
@@ -13,11 +76,8 @@
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 .equ	ARM_TOT		= 10	; Number of 65536us periods must recieve ARM pulse
 
-; These might be a bit wide for most radios, but lines up with POWER_RANGE.
-.equ	STOP_RC_PULS	= 1000	; Stop motor at or below this pulse length
-.equ	FULL_RC_PULS	= 2000	; Full speed at or above this pulse length
-.equ	MAX_RC_PULS	= 2200	; Throw away any pulses longer than this
-.equ	MIN_RC_PULS	= 800	; Throw away any pulses shorter than this
+.equ	MAX_RC_PULS	= 2100	; Throw away any pulses longer than this
+.equ	MIN_RC_PULS	= 900	; Throw away any pulses shorter than this
 
 .equ	CPU_MHZ		= F_CPU / 1000000
 .equ	CPWM_OVERHEAD_LOW = 9
@@ -34,7 +94,6 @@
 .equ	PWR_MAX_START	= (POWER_RANGE/4) ; Power limit while starting (if still not running)
 
 .equ	BRAKE_POWER	= MAX_POWER*2/3	; Brake force is exponential, so start fairly high
-.equ	BRAKE_SPEED	= 8		; Speed to reach MAX_POWER, 0 (slowest) - 8 (fastest)
 
 .equ	TIMING_MAX	= 0x00e0 ; 56us per commutation
 
@@ -118,7 +177,6 @@
 .dseg				; DATA segment
 .org SRAM_START
 
-
 goodies:	.byte	1	; Number of rounds without timeout
 powerskip:	.byte	1	; Skip power through this number of steps
 ocr1ax:		.byte	1	; 3rd byte of OCR1A
@@ -141,9 +199,6 @@ start_modulate:	.byte	1	; Start modulation counter (to reduce heating from PWR_M
 start_fail:	.byte   1	; Number of start_modulate loops for eventual failure and disarm
 rc_duty_l:	.byte	1	; desired duty cycle
 rc_duty_h:	.byte	1
-fwd_scale_l:	.byte	1	; 16.16 multipliers to scale input RC pulse to POWER_RANGE
-fwd_scale_h:	.byte	1
-brake_sub:	.byte	1	; Brake speed subtrahend (power of two)
 brake_want:	.byte	1	; Type of brake desired
 brake_active:	.byte	1	; Type of brake active
 ;**** **** **** **** ****
@@ -152,6 +207,10 @@ puls_high_l:	.byte	1	;
 puls_high_h:	.byte	1	;
 puls_low_l:	.byte	1	;
 puls_low_h:	.byte	1	;
+fwd_scale_l:	.byte	1	; 16.16 multipliers to scale input RC pulse to POWER_RANGE
+fwd_scale_h:	.byte	1
+brake_sub:	.byte	1	; Brake speed subtrahend (power of two)
+dummy_spare: 	.byte	1
 RAM_end:	.byte	1
 ;-----bko-----------------------------------------------------------------
 ;**** **** **** **** ****
@@ -184,9 +243,10 @@ RAM_end:	.byte	1
 		reti		; spmc_int	SPMaddr =$012	; SPM complete Interrupt Vector Address
 
 defaults_w:
-	.db byte1(FULL_RC_PULS * CPU_MHZ), byte2(FULL_RC_PULS * CPU_MHZ)
-	.db byte1(STOP_RC_PULS * CPU_MHZ), byte2(STOP_RC_PULS * CPU_MHZ)
-
+	.db byte1(32000), byte2(32000) 	; FULL_RC_PULS * CPU_MHZ
+	.db byte1(16000), byte2(16000) 	; STOP_RC_PULS * CPU_MHZ
+	.db byte1(4096),  byte2(4096)	; (POWER_RANGE - MIN_DUTY) * 65536 / (1000us * 16MHz)
+	.db 0xff, 0xff 			; BRAKE_SPEED fastest
 ;-- Instruction extension macros -----------------------------------------
 .include "macros.inc"
 ;--------------------------------------------------------------------------
@@ -267,7 +327,6 @@ pwm_again:
 		reti
 
 pwm_on:
-
 		sbrc	flags2, A_FET
 		ApFET_off
 		sbrc	flags2, B_FET
@@ -470,7 +529,6 @@ wait3:		in	temp1, TIFR
 wait_ret:	ret
 
 ;-- RAM functions -----------------------------------------------
-; Interrupts must be disabled to avoid Z conflicts and content changes.
 set_defaults_to_RAM:
 		ldi2	YL, YH, puls_high_l
 		ldi	ZL, low(defaults_w << 1)
@@ -541,44 +599,6 @@ rc_no_set_duty:	ldi	temp1, 12		; More than 10 needed to arm
 		cp	rc_timeout, temp1
 		adc	rc_timeout, ZH
 		ret
-;-----bko-----------------------------------------------------------------
-; Calculate the neutral offset and forward (and reverse) scaling factors
-; to line up with the high/low (and neutral) pulse lengths.
-puls_scale:
-		lds	temp1, puls_low_l	; 0x80
-		lds	temp2, puls_low_h 	; 0x3e
-	; Find the distance to full throttle and fit it to match the
-	; distance between FULL_RC_PULS and STOP_RC_PULS by walking
-	; for the lowest 16.16 multiplier that just brings us in range.
-		lds	temp3, puls_high_l 	; 0x00
-		lds	temp4, puls_high_h 	; 0x7d
-		sub	temp3, temp1
-		sbc	temp4, temp2
-		rcall	puls_find_multiplicand
-		sts	fwd_scale_l, temp1
-		sts	fwd_scale_h, temp2
-		ret
-;-----bko-----------------------------------------------------------------
-; Find the lowest 16.16 multiplicand that brings us to full throttle
-; (POWER_RANGE - MIN_DUTY) when multiplied by temp3:temp4.
-; The range we are looking for is around 3000 - 10000:
-; m = (POWER_RANGE - MIN_DUTY) * 65536 / (1000us * 16MHz)
-; If the input range is < 100us at 8MHz, < 50us at 16MHz, we return
-; too low a multiplicand (higher won't fit in 16 bits).
-; We preload temp1:temp2 with the weakest possible scale based on the
-; fact that we can't accept a wider range than MAX_RC_PULS microseconds.
-puls_find_multiplicand:
-		ldi2	temp1, temp2, 1000 * 65536 / 32000
-puls_find1:	adiw	temp1, 1
-		wdr
-	; Start with negative POWER_RANGE so that 0 is full throttle
-		ldi2	YL, YH, -1000
-		rcall	mul_y_12x34
-	; We will always be increasing the result in steps of less than 1,
-	; so we can test for just zero rather than a range.
-		brne	puls_find1
-puls_find_fail:	ret
-
 ;-----bko-----------------------------------------------------------------
 update_timing:
 		cli
@@ -818,7 +838,6 @@ control_start:
 control_disarm:	GRN_off 			; LEDs off while disarmed
 		RED_off
 		cbr	flags0, (1<<SET_DUTY)	; We need to count a full rc_timeout for safe arming
-		rcall	puls_scale 		; !!!! NEED TO MANUALISE THIS!!!!
 
 		outi	TCCR1B, T1CLK 		; Set next ICP to rising edge
 
@@ -864,8 +883,6 @@ wait_for_power_on_init:
 		rcall	switch_power_off	; Disable any active brake
 		sts	brake_active, temp3	; Set new brake_active to brake_want
 
-		ldi	YL, (1 << BRAKE_SPEED) - 1 ; The 1->8 range now gives : 1,3,7,15,31,63,127,255
-		sts	brake_sub, YL
 		ldi2	YL, YH, BRAKE_POWER
 
 		;set_brake_duty
