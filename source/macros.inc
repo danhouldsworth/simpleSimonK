@@ -106,6 +106,12 @@
 		ldi	@2, byte3(@3)
 .endmacro
 
+; Store immediate in SRAM
+.macro stsi
+	ldi	temp1, @1
+	sts	@0, temp1
+.endmacro
+
 ; Immediate out to any port via temp1 (all reg on mega8 are <0x3f)
 .macro outi
 	ldi	temp1, @1
@@ -349,3 +355,15 @@
 		sei
 .endmacro
 
+.MACRO RED_on
+	sbi	DDRC, red_led
+.ENDMACRO
+.MACRO RED_off
+	cbi	DDRC, red_led
+.ENDMACRO
+.MACRO GRN_on
+	sbi	DDRC, green_led
+.ENDMACRO
+.MACRO GRN_off
+	cbi	DDRC, green_led
+.ENDMACRO
