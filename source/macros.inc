@@ -116,57 +116,41 @@
 ; Careful: "if" conditions split over multiple lines (with backslashes)
 ; work with arva, but avrasm2.exe silently produces wrong results.
 
-.macro FET_on
-.if (INIT_PB & ((@0 == PORTB) << @1)) | (INIT_PC & ((@0 == PORTC) << @1)) | (INIT_PD & ((@0 == PORTD) << @1))
-		cbi	@0, @1
-.else
-		sbi	@0, @1
-.endif
-.endmacro
-
-.macro FET_off
-.if (INIT_PB & ((@0 == PORTB) << @1)) | (INIT_PC & ((@0 == PORTC) << @1)) | (INIT_PD & ((@0 == PORTD) << @1))
-		sbi	@0, @1
-.else
-		cbi	@0, @1
-.endif
-.endmacro
-
 .macro AnFET_on
-		FET_on	AnFET_port, AnFET
+		sbi	PORTD, AnFET
 .endmacro
 .macro AnFET_off
-		FET_off	AnFET_port, AnFET
+		cbi	PORTD, AnFET
 .endmacro
 .macro ApFET_on
-		FET_on	ApFET_port, ApFET
+		cbi	PORTD, ApFET
 .endmacro
 .macro ApFET_off
-		FET_off	ApFET_port, ApFET
+		sbi	PORTD, ApFET
 .endmacro
 .macro BnFET_on
-		FET_on	BnFET_port, BnFET
+		sbi	PORTD, BnFET
 .endmacro
 .macro BnFET_off
-		FET_off	BnFET_port, BnFET
+		cbi	PORTD, BnFET
 .endmacro
 .macro BpFET_on
-		FET_on	BpFET_port, BpFET
+		sbi	PORTB, BpFET
 .endmacro
 .macro BpFET_off
-		FET_off	BpFET_port, BpFET
+		sbi	PORTB, BpFET
 .endmacro
 .macro CnFET_on
-		FET_on	CnFET_port, CnFET
+		sbi	PORTD, CnFET
 .endmacro
 .macro CnFET_off
-		FET_off	CnFET_port, CnFET
+		cbi	PORTD, CnFET
 .endmacro
 .macro CpFET_on
-		FET_on	CpFET_port, CpFET
+		sbi	PORTB, CpFET
 .endmacro
 .macro CpFET_off
-		FET_off	CpFET_port, CpFET
+		sbi	PORTB, CpFET
 .endmacro
 
 .macro all_pFETs_off
@@ -176,23 +160,9 @@
 .endmacro
 
 .macro all_nFETs_off
-		in	@0, AnFET_port
-	.if (INIT_PB & ((AnFET_port == PORTB) << AnFET)) | (INIT_PD & ((AnFET_port == PORTD) << AnFET))
-		sbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
-	.else
-		cbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
-	.endif
-		out	AnFET_port, @0
-.endmacro
-
-.macro nFET_brake
-		in	@0, AnFET_port
-	.if (INIT_PB & ((AnFET_port == PORTB) << AnFET)) | (INIT_PD & ((AnFET_port == PORTD) << AnFET))
-		cbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
-	.else
-		sbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
-	.endif
-		out	AnFET_port, @0
+		in	@0, PORTD
+		cbr	@0, (1<<AnFET) | (1<<BnFET) | (1<<CnFET)
+		out	PORTD, @0
 .endmacro
 
 ;-- Analog comparator sense macros ---------------------------------------
@@ -280,9 +250,9 @@
 
 		CpFET_off
 
-		in	temp1, CnFET_port
+		in	temp1, PORTD
 		CnFET_off
-		in	temp2, CnFET_port
+		in	temp2, PORTD
 		cpse	temp1, temp2
 		BnFET_on
 		sei
@@ -297,9 +267,9 @@
 
 		BpFET_off
 
-		in	temp1, BnFET_port
+		in	temp1, PORTD
 		BnFET_off
-		in	temp2, BnFET_port
+		in	temp2, PORTD
 		cpse	temp1, temp2
 		CnFET_on
 		sei
@@ -330,9 +300,9 @@
 
 		BpFET_off
 
-		in	temp1, BnFET_port
+		in	temp1, PORTD
 		BnFET_off
-		in	temp2, BnFET_port
+		in	temp2, PORTD
 		cpse	temp1, temp2
 		AnFET_on
 		sei
@@ -347,9 +317,9 @@
 
 		ApFET_off
 
-		in	temp1, AnFET_port
+		in	temp1, PORTD
 		AnFET_off
-		in	temp2, AnFET_port
+		in	temp2, PORTD
 		cpse	temp1, temp2
 		BnFET_on
 		sei
@@ -380,9 +350,9 @@
 
 		ApFET_off
 
-		in	temp1, AnFET_port
+		in	temp1, PORTD
 		AnFET_off
-		in	temp2, AnFET_port
+		in	temp2, PORTD
 		cpse	temp1, temp2
 		CnFET_on
 		sei
@@ -397,9 +367,9 @@
 
 		CpFET_off
 
-		in	temp1, CnFET_port
+		in	temp1, PORTD
 		CnFET_off
-		in	temp2, CnFET_port
+		in	temp2, PORTD
 		cpse	temp1, temp2
 		AnFET_on
 		sei
