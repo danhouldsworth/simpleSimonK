@@ -117,7 +117,7 @@
 ; work with arva, but avrasm2.exe silently produces wrong results.
 
 .macro FET_on
-.if ((1 << BpFET) | (1 << CpFET) & ((@0 == PORTB) << @1)) | ((1 << ApFET) & ((@0 == PORTD) << @1))
+.if (((1 << BpFET) | (1 << CpFET)) & ((@0 == PORTB) << @1)) | ((1 << ApFET) & ((@0 == PORTD) << @1))
 		cbi	@0, @1
 .else
 		sbi	@0, @1
@@ -125,7 +125,7 @@
 .endmacro
 
 .macro FET_off
-.if ((1 << BpFET) | (1 << CpFET) & ((@0 == PORTB) << @1)) | ((1 << ApFET) & ((@0 == PORTD) << @1))
+.if (((1 << BpFET) | (1 << CpFET)) & ((@0 == PORTB) << @1)) | ((1 << ApFET) & ((@0 == PORTD) << @1))
 		sbi	@0, @1
 .else
 		cbi	@0, @1
@@ -177,7 +177,7 @@
 
 .macro all_nFETs_off
 		in	@0, PORTD
-	.if ((1 << BpFET) | (1 << CpFET) & ((PORTD == PORTB) << AnFET)) | ((1 << ApFET) & ((PORTD == PORTD) << AnFET))
+	.if (((1 << BpFET) | (1 << CpFET)) & ((PORTD == PORTB) << AnFET)) | ((1 << ApFET) & ((PORTD == PORTD) << AnFET))
 		sbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
 	.else
 		cbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
@@ -187,7 +187,7 @@
 
 .macro nFET_brake
 		in	@0, PORTD
-	.if ((1 << BpFET) | (1 << CpFET) & ((PORTD == PORTB) << AnFET)) | ((1 << ApFET) & ((PORTD == PORTD) << AnFET))
+	.if (((1 << BpFET) | (1 << CpFET)) & ((PORTD == PORTB) << AnFET)) | ((1 << ApFET) & ((PORTD == PORTD) << AnFET))
 		cbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
 	.else
 		sbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
