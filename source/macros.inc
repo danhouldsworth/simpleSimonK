@@ -170,51 +170,29 @@
 .endmacro
 
 .macro all_pFETs_off
-.if ApFET_port != BpFET_port || ApFET_port != CpFET_port
 		ApFET_off
 		BpFET_off
 		CpFET_off
-.else
-		in	@0, ApFET_port
-	.if (INIT_PB & ((ApFET_port == PORTB) << ApFET)) | (INIT_PC & ((ApFET_port == PORTC) << ApFET)) | (INIT_PD & ((ApFET_port == PORTD) << ApFET))
-		sbr	@0, (1<<ApFET)+(1<<BpFET)+(1<<CpFET)
-	.else
-		cbr	@0, (1<<ApFET)+(1<<BpFET)+(1<<CpFET)
-	.endif
-		out	ApFET_port, @0
-.endif
 .endmacro
 
 .macro all_nFETs_off
-.if AnFET_port != BnFET_port || AnFET_port != CnFET_port
-		AnFET_off
-		BnFET_off
-		CnFET_off
-.else
 		in	@0, AnFET_port
-	.if (INIT_PB & ((AnFET_port == PORTB) << AnFET)) | (INIT_PC & ((AnFET_port == PORTC) << AnFET)) | (INIT_PD & ((AnFET_port == PORTD) << AnFET))
+	.if (INIT_PB & ((AnFET_port == PORTB) << AnFET)) | (INIT_PD & ((AnFET_port == PORTD) << AnFET))
 		sbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
 	.else
 		cbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
 	.endif
 		out	AnFET_port, @0
-.endif
 .endmacro
 
 .macro nFET_brake
-.if AnFET_port != BnFET_port || AnFET_port != CnFET_port
-		AnFET_on
-		BnFET_on
-		CnFET_on
-.else
 		in	@0, AnFET_port
-	.if (INIT_PB & ((AnFET_port == PORTB) << AnFET)) | (INIT_PC & ((AnFET_port == PORTC) << AnFET)) | (INIT_PD & ((AnFET_port == PORTD) << AnFET))
+	.if (INIT_PB & ((AnFET_port == PORTB) << AnFET)) | (INIT_PD & ((AnFET_port == PORTD) << AnFET))
 		cbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
 	.else
 		sbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
 	.endif
 		out	AnFET_port, @0
-.endif
 .endmacro
 
 ;-- Analog comparator sense macros ---------------------------------------
@@ -226,44 +204,23 @@
 		in	@0, SFIOR
 		sbr	@0, (1<<ACME)	; set Analog Comparator Multiplexer Enable
 		out	SFIOR, @0
-	.if defined(mux_a) && defined(mux_b) && defined(mux_c)
-		cbi	ADCSRA, ADEN	; Disable ADC to make sure ACME works
-	.endif
 .endmacro
 .macro comp_adc_disable
-	.if !defined(mux_a) || !defined(mux_b) || !defined(mux_c)
 		cbi	ADCSRA, ADEN	; Disable ADC if we enabled it to get AIN1
-	.endif
 .endmacro
 .macro comp_adc_enable
-		sbi	ADCSRA, ADEN	; Eisable ADC to effectively disable ACME
+		sbi	ADCSRA, ADEN	; Enable ADC to effectively disable ACME
 .endmacro
 .macro set_comp_phase_a
-	.if defined(mux_a)
-		ldi	@0, mux_a	; set comparator multiplexer to phase A
-		out	ADMUX, @0
+		outi	ADMUX, mux_a	; set comparator multiplexer to phase A
 		comp_adc_disable
-	.else
-		comp_adc_enable
-	.endif
 .endmacro
 .macro set_comp_phase_b
-	.if defined(mux_b)
-		ldi	@0, mux_b	; set comparator multiplexer to phase B
-		out	ADMUX, @0
+		outi	ADMUX, mux_b	; set comparator multiplexer to phase B
 		comp_adc_disable
-	.else
-		comp_adc_enable
-	.endif
 .endmacro
 .macro set_comp_phase_c
-	.if defined(mux_c)
-		ldi	@0, mux_c	; set comparator multiplexer to phase C
-		out	ADMUX, @0
-		comp_adc_disable
-	.else
 		comp_adc_enable
-	.endif
 .endmacro
 
 ; Short cycle delay without clobbering flags
@@ -300,7 +257,7 @@
 
 .macro com1com2
 		; Bp off, Ap on
-		set_comp_phase_b temp1
+		set_comp_phase_b
 		BpFET_off
 		sbrc	flags1, POWER_ON
 		ApFET_on
@@ -308,7 +265,7 @@
 
 .macro com2com1
 		; Bp on, Ap off
-		set_comp_phase_a temp1
+		set_comp_phase_a
 		ApFET_off
 		sbrc	flags1, POWER_ON
 		BpFET_on
@@ -333,7 +290,7 @@
 
 .macro com3com2
 		; Cn on, Bn off
-		set_comp_phase_b temp1
+		set_comp_phase_b
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<C_FET)
@@ -350,7 +307,7 @@
 
 .macro com3com4
 		; Ap off, Cp on
-		set_comp_phase_a temp1
+		set_comp_phase_a
 		ApFET_off
 		sbrc	flags1, POWER_ON
 		CpFET_on
@@ -366,7 +323,7 @@
 
 .macro com4com5
 		; Bn off, An on
-		set_comp_phase_b temp1
+		set_comp_phase_b
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<A_FET)
@@ -383,7 +340,7 @@
 
 .macro com5com4
 		; Bn on, An off
-		set_comp_phase_a temp1
+		set_comp_phase_a
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<B_FET)
@@ -408,7 +365,7 @@
 
 .macro com6com5
 		; Cp on, Bp off
-		set_comp_phase_b temp1
+		set_comp_phase_b
 		BpFET_off
 		sbrc	flags1, POWER_ON
 		CpFET_on
@@ -416,7 +373,7 @@
 
 .macro com6com1
 		; An off, Cn on
-		set_comp_phase_a temp1
+		set_comp_phase_a
 		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<C_FET)
