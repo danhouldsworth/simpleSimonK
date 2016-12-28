@@ -11,7 +11,7 @@
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
 
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
-.equ	ARM_TOT		= 10	; Number of 65536us periods before considering rc pulse lost
+.equ	ARM_TOT		= 10	; Number of 65536us periods must recieve ARM pulse
 
 ; These might be a bit wide for most radios, but lines up with POWER_RANGE.
 .equ	STOP_RC_PULS	= 1000	; Stop motor at or below this pulse length
@@ -105,9 +105,9 @@
 	.equ	C_FET		= 2	; if set, C FET is being PWMed
 	.equ	ALL_FETS	= (1 << A_FET) | (1 << B_FET) | (1 << C_FET)
 	.equ	SKIP_CPWM	= 7	; if set, skip complementary PWM (for short off period)
-.def	i_temp1		= r19		; interrupt temporary
-.def	i_temp2		= r20		; interrupt temporary
-.def	i_temp3		= r21		; interrupt temporary
+.def	i_temp3		= r19		; interrupt temporary
+.def	i_temp1		= r20		; interrupt temporary
+.def	i_temp2		= r21		; interrupt temporary
 .def	temp3		= r22		; main temporary (L)
 .def	temp4		= r23		; main temporary (H)
 .def	temp1		= r24		; main temporary (L), adiw-capable
@@ -929,7 +929,8 @@ i_rc_puls_rx:	rcall	evaluate_rc
 		lds	YH, rc_duty_h
 		adiw	YL, 0			; Test for zero
 		brne	i_rc_puls1
-		cpi	rc_timeout, ARM_TOT	; wait for this count of receiving arm pulse
+		ldi 	temp1, ARM_TOT		; wait for this count of receiving arm pulse
+		cp	rc_timeout, temp1
 		brlo	i_rc_puls2
 
 		rcall 	beep_f1 		; signal: rcpuls ready [Custom tune!]
