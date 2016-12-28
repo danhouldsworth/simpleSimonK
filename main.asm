@@ -408,8 +408,8 @@ rising_edge:
 		adiwx	i_temp1, i_temp2, MAX_RC_PULS * CPU_MHZ
 		out	OCR1BH, i_temp2
 		out	OCR1BL, i_temp1
-		rcp_int_falling_edge i_temp1	; Set next int to falling edge
-		ldi	i_temp1, (1<<OCF1B)	; Clear OCF1B flag
+		outi	TCCR1B, T1CLK & ~(1<<ICES1) 	; Set next int to falling edge
+		ldi	i_temp1, (1<<OCF1B)		; Clear OCF1B flag
 		out	TIFR, i_temp1
 		out	SREG, i_sreg
 		reti
@@ -431,7 +431,7 @@ falling_edge:
 		sub	rx_l, i_temp1		; Subtract start time from current time
 		sbc	rx_h, i_temp2
 		sbr	flags1, (1<<EVAL_RC)
-rcpint_exit:	rcp_int_rising_edge i_temp1	; Set next int to rising edge
+rcpint_exit:	outi	TCCR1B, T1CLK 		; Set next int to rising edge
 		out	SREG, i_sreg
 		reti
 
@@ -914,14 +914,11 @@ control_start:
 control_disarm:	GRN_off 			; LEDs off while disarmed
 		RED_off
 		cbr	flags0, (1<<SET_DUTY)	; We need to count a full rc_timeout for safe arming
-		rcall	puls_scale
+		rcall	puls_scale 		; !!!! NEED TO MANUALISE THIS!!!!
 
-	; Initialize input sources (rc-puls)
-		rcp_int_rising_edge temp1
-		rcp_int_enable temp1
+		outi	TCCR1B, T1CLK 		; Set next ICP to rising edge
 
-	; Wait for arming input
-i_rc_puls1:	clr	rc_timeout
+i_rc_puls1:	clr	rc_timeout 		; Wait for arming input
 		cbr	flags1, (1<<EVAL_RC)
 i_rc_puls2:	wdr
 		sbrc	flags1, EVAL_RC
@@ -946,7 +943,6 @@ i_rc_puls_rx:	rcall	evaluate_rc
 		rcall 	beep_f3
 		rcall 	beep_f4
 
-	; Fall through to restart_control
 ;-----bko-----------------------------------------------------------------
 restart_control:
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
@@ -1366,21 +1362,14 @@ clear_loop1:	cp	ZL, r0
 		out	TCCR2, ZH		; timer2: PWM, stopped
 
 	; Enable watchdog (WDTON may be set or unset)
-		ldi	temp1, (1<<WDCE) | (1<<WDE)
-		out	WDTCR, temp1
-		ldi	temp1, (1<<WDE)		; Fastest option: ~16.3ms timeout
-		out	WDTCR, temp1
+		outi	WDTCR, (1<<WDCE) | (1<<WDE)
+		outi	WDTCR, (1<<WDE)		; Fastest option: ~16.3ms timeout
 
 	; Enable timer interrupts (we only do this late to improve beep quality)
-		ldi	temp1, (1<<TOIE1) | (1<<OCIE1A) | (1<<TOIE2)
+		ldi	temp1, (1<<TOIE1) | (1<<OCIE1A) | (1<<TOIE2) | (1<<TICIE1)
 		out	TIFR, temp1		; Clear TOIE1, OCIE1A, and TOIE2 flags
 		out	TIMSK, temp1		; Enable t1ovfl_int, t1oca_int, t2ovfl_int
 
-	; Wait for power to settle -- this must be no longer than 64ms
-	; (with 64ms delayed start fuses) for i2c V2 protocol detection
-		rcall	wait30ms		; Running at unadjusted speed(!)
-
-	; Copy the default settings (stored as double-bytes to RAM)
-		rcall 	set_defaults_to_RAM
-
+		rcall	wait30ms		; Wait for power to settle -- this must be no longer than 64ms
+		rcall 	set_defaults_to_RAM 	; Copy the default settings (stored as double-bytes to RAM)
 		rjmp	control_start
