@@ -226,7 +226,7 @@ pwm_brake_on:
 		cpse	tcnt2h, ZH
 		rjmp	pwm_again
 		in	i_sreg, SREG
-		all_nFETs_off i_temp1 		; nFET brake
+		nFET_brake i_temp1
 		ldi	i_temp1, 0xff
 		cp	off_duty_l, i_temp1	; Check for 0 off-time
 		cpc	off_duty_h, ZH
