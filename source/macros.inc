@@ -177,21 +177,7 @@
 
 .macro all_nFETs_off
 		in	@0, PORTD
-	.if (((1 << BpFET) | (1 << CpFET)) & ((PORTD == PORTB) << AnFET)) | ((1 << ApFET) & ((PORTD == PORTD) << AnFET))
-		sbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
-	.else
 		cbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
-	.endif
-		out	PORTD, @0
-.endmacro
-
-.macro nFET_brake
-		in	@0, PORTD
-	.if (((1 << BpFET) | (1 << CpFET)) & ((PORTD == PORTB) << AnFET)) | ((1 << ApFET) & ((PORTD == PORTD) << AnFET))
-		cbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
-	.else
-		sbr	@0, (1<<AnFET)+(1<<BnFET)+(1<<CnFET)
-	.endif
 		out	PORTD, @0
 .endmacro
 
