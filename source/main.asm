@@ -20,8 +20,7 @@
 .equ	MIN_RC_PULS	= 800	; Throw away any pulses shorter than this
 
 .equ	CPU_MHZ		= F_CPU / 1000000
-.equ	DEAD_TIME_LOW	= DEAD_LOW_NS * CPU_MHZ / 1000 	; 4.8
-.equ	DEAD_TIME_HIGH	= DEAD_HIGH_NS * CPU_MHZ / 1000 ; 4.8
+.equ	CPWM_OVERHEAD_LOW = 9
 
 ; Minimum PWM on-time (too low and FETs won't turn on, hard starting)
 .equ	MIN_DUTY	= 56 * CPU_MHZ / 16
@@ -33,16 +32,10 @@
 .equ	PWR_COOL_START	= (POWER_RANGE/24) ; Power limit while starting to reduce heating
 .equ	PWR_MIN_START	= (POWER_RANGE/6) ; Power limit while starting (to start)
 .equ	PWR_MAX_START	= (POWER_RANGE/4) ; Power limit while starting (if still not running)
-.equ	PWR_MAX_RPM1	= (POWER_RANGE/4) ; Power limit when running slower than TIMING_RANGE1
-;.equ	PWR_MAX_RPM2	= (POWER_RANGE/2) ; Power limit when running slower than TIMING_RANGE2
 
 .equ	BRAKE_POWER	= MAX_POWER*2/3	; Brake force is exponential, so start fairly high
 .equ	BRAKE_SPEED	= 8		; Speed to reach MAX_POWER, 0 (slowest) - 8 (fastest)
 
-;.equ	TIMING_MIN	= 0x8000 ; 8192us per commutation
-;.equ	TIMING_RANGE1	= 0x4000 ; 4096us per commutation
-;.equ	TIMING_RANGE2	= 0x2000 ; 2048us per commutation
-.equ	TIMING_RANGE3	= 0x1000 ; 1024us per commutation
 .equ	TIMING_MAX	= 0x00e0 ; 56us per commutation
 
 .equ	TIMEOUT_START	= 48000	; Timeout per commutation for ZC during starting
@@ -317,7 +310,6 @@ pwm_off:
 		out	TCNT2, off_duty_l	; 1 cycle
 		sbrc	flags2, SKIP_CPWM	; 2 cycles if skip, 1 cycle otherwise
 		reti
-		.equ	CPWM_OVERHEAD_LOW = 9
 		sbrc	flags2, A_FET
 		ApFET_on
 		sbrc	flags2, B_FET
@@ -637,54 +629,7 @@ update_timing:
 		lsr	sys_control_h		; limit by reducing power
 		ror	sys_control_l
 update_timing1:
-
-	; Calculate a hopefully sane duty cycle limit from this timing,
-	; to prevent excessive current if high duty is requested at low
-	; speed. This is the best we can do without a current sensor.
-	; The actual current peak will depend on motor KV and voltage,
-	; so this is just an approximation. This is calculated smoothly
-	; with a (very slow) software divide only if timing permits.
-
-		cpi2	temp2, temp3, (TIMING_RANGE3 * CPU_MHZ / 2) >> 8, temp4
 		ldi2	XL, XH, MAX_POWER
-		brcs	update_timing4 ; Fast timing - no duty limits
-
-		; 24.8-bit fixed-point unsigned divide, inlined with available registers:
-		; duty (XL:XH) = MAX_POWER * (TIMING_RANGE3 * CPU_MHZ / 2) / period (temp1:temp2:temp3)
-		; This takes about one microsecond per loop, but we only take this path
-		; when the motor is spinning slowly.
-
-		ldi	XL, byte3(MAX_POWER * (TIMING_RANGE3 * CPU_MHZ / 2) / 0x100)
-		ldi	XH, 33		; Iteration counter
-		movw	timing_duty_l, XL
-		ldi2	XL, XH, MAX_POWER * (TIMING_RANGE3 * CPU_MHZ / 2) / 0x100
-
-		mul	ZH, ZH		; Zero temp5, temp6
-		sub	temp4, temp4	; Zero temp4, clear carry
-		rjmp	fudiv24_ep	; Jump with carry clear
-fudiv24_loop:
-		rol	temp4
-		rol	temp5
-		rol	temp6
-		cp	temp4, temp1	; Divide by commutation period
-		cpc	temp5, temp2
-		cpc	temp6, temp3
-		brcs	fudiv24_ep
-		sub	temp4, temp1
-		sbc	temp5, temp2
-		sbc	temp6, temp3
-fudiv24_ep:
-		rol	XL
-		rol	XH
-		rol	timing_duty_l
-		dec	timing_duty_h
-		brne	fudiv24_loop
-		com	XL
-		com	XH
-
-		cpi2	XL, XH, PWR_MAX_RPM1, temp4
-		brcc	update_timing4
-		ldi2	XL, XH, PWR_MAX_RPM1
 update_timing4:	movw	timing_duty_l, XL
 
 		sts	timing_l, temp1		; Store timing (120 degrees)
