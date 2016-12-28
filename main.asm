@@ -11,6 +11,7 @@
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
 
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
+.equ	ARM_TOT		= 10	; Number of 65536us periods before considering rc pulse lost
 
 ; These might be a bit wide for most radios, but lines up with POWER_RANGE.
 .equ	STOP_RC_PULS	= 1000	; Stop motor at or below this pulse length
@@ -909,19 +910,11 @@ switch_power_off:
 		ret
 ;-----bko-----------------------------------------------------------------
 control_start:
-
-control_disarm:
-	; LEDs off while disarmed
-		GRN_off
+		sei
+control_disarm:	GRN_off 			; LEDs off while disarmed
 		RED_off
-
 		cbr	flags0, (1<<SET_DUTY)	; We need to count a full rc_timeout for safe arming
 		rcall	puls_scale
-
-	; Enable timer interrupts (we only do this late to improve beep quality)
-		ldi	temp1, (1<<TOIE1) | (1<<OCIE1A) | (1<<TOIE2)
-		out	TIFR, temp1		; Clear TOIE1, OCIE1A, and TOIE2 flags
-		out	TIMSK, temp1		; Enable t1ovfl_int, t1oca_int, t2ovfl_int
 
 	; Initialize input sources (rc-puls)
 		rcp_int_rising_edge temp1
@@ -939,8 +932,7 @@ i_rc_puls_rx:	rcall	evaluate_rc
 		lds	YH, rc_duty_h
 		adiw	YL, 0			; Test for zero
 		brne	i_rc_puls1
-		ldi	temp1, 10		; wait for this count of receiving power off
-		cp	rc_timeout, temp1
+		cpi	rc_timeout, ARM_TOT	; wait for this count of receiving arm pulse
 		brlo	i_rc_puls2
 
 		rcall 	beep_f1 		; signal: rcpuls ready [Custom tune!]
@@ -1346,28 +1338,19 @@ wait_startup1:	rcall	set_ocr1a_rel
 		rjmp	wait_for_edge1
 
 ;-----bko-----------------------------------------------------------------
-; init after reset
-
 reset:		clr	r0
 		out	SREG, r0		; Clear interrupts and flags
-
-	; Set up stack
-		ldi2	ZL, ZH, RAMEND
+		ldi2	ZL, ZH, RAMEND 		; Set up stack
 		out	SPH, ZH
 		out	SPL, ZL
-	; Clear RAM and all registers
-clear_loop:	st	-Z, r0
+clear_loop:	st	-Z, r0 			; Clear RAM and all registers
 		cpi	ZL, SRAM_START
 		cpc	ZH, r0
 		brne	clear_loop1
-		ldi	ZL, 30			; Start clearing registers
+		ldi	ZL, 0x1e		; Start clearing registers
 clear_loop1:	cp	ZL, r0
 		cpc	ZH, r0
 		brne	clear_loop		; Leaves with all registers (r0 through ZH) at 0
-
-	; Save reset cause
-		in	temp7, MCUCSR		; Store reset reason in register not used for a while
-		out	MCUCSR, ZH
 
 	; Initialize ports
 		outi	PORTB, INIT_PB
@@ -1388,65 +1371,16 @@ clear_loop1:	cp	ZL, r0
 		ldi	temp1, (1<<WDE)		; Fastest option: ~16.3ms timeout
 		out	WDTCR, temp1
 
+	; Enable timer interrupts (we only do this late to improve beep quality)
+		ldi	temp1, (1<<TOIE1) | (1<<OCIE1A) | (1<<TOIE2)
+		out	TIFR, temp1		; Clear TOIE1, OCIE1A, and TOIE2 flags
+		out	TIMSK, temp1		; Enable t1ovfl_int, t1oca_int, t2ovfl_int
+
 	; Wait for power to settle -- this must be no longer than 64ms
 	; (with 64ms delayed start fuses) for i2c V2 protocol detection
 		rcall	wait30ms		; Running at unadjusted speed(!)
 
 	; Copy the default settings (stored as double-bytes to RAM)
-		rcall set_defaults_to_RAM
+		rcall 	set_defaults_to_RAM
 
-	; Enable interrupts for early input (i2c)
-		sei
-		; * The comment suggests this is only needed for I2C, but I can't find where interupts are turned back on before the controlled start
-		; * I'll only comment and not delete
-
-	; Check reset cause
-		bst	temp7, PORF		; Power-on reset
-		cpse	temp7, ZH		; or zero
-		brtc	init_no_porf
-		rcall	beep_f1			; Usual startup beeps
-		rcall	beep_f2
-		rcall	beep_f3
 		rjmp	control_start
-init_no_porf:
-		sbrs	temp7, BORF		; Brown-out reset
-		rjmp	init_no_borf
-		rcall	beep_f3			; "dead cellphone"
-		rcall	beep_f1
-		rjmp	control_start
-init_no_borf:
-		sbrs	temp7, EXTRF		; External reset
-		rjmp	init_no_extrf
-		rcall	beep_f4			; Single beep
-		rjmp	control_start
-init_no_extrf:
-		cli				; Disable interrupts for terminal reset causes
-
-		sbrs	temp7, WDRF		; Watchdog reset
-		rjmp	init_no_wdrf
-init_wdrf1:	rcall	beep_f1			; "siren"
-		rcall	beep_f1
-		rcall	beep_f3
-		rcall	beep_f3
-		rjmp	init_wdrf1		; Loop forever
-init_no_wdrf:
-
-	; Unknown reset cause: Beep out all 8 bits
-	; Sometimes I can cause this by touching the oscillator.
-init_bitbeep1:	rcall	wait240ms
-		mov	i_temp1, temp7
-		ldi	i_temp2, 8
-init_bitbeep2:	sbrs	i_temp1, 0
-		rcall	beep_f2
-		sbrc	i_temp1, 0
-		rcall	beep_f4
-		rcall	wait120ms
-		lsr	i_temp1
-		dec	i_temp2
-		brne	init_bitbeep2
-		rjmp	init_bitbeep1		; Loop forever
-
-
-; -------------------- End (Boot loader would go here) --------------------
-;
-;--------------------------------------------------------------------------
