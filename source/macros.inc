@@ -113,60 +113,41 @@
 .endmacro
 
 ;-- FET driving macros ---------------------------------------------------
-; Careful: "if" conditions split over multiple lines (with backslashes)
-; work with arva, but avrasm2.exe silently produces wrong results.
-
-.macro FET_on
-.if (((1 << BpFET) | (1 << CpFET)) & ((@0 == PORTB) << @1)) | ((1 << ApFET) & ((@0 == PORTD) << @1))
-		cbi	@0, @1
-.else
-		sbi	@0, @1
-.endif
-.endmacro
-
-.macro FET_off
-.if (((1 << BpFET) | (1 << CpFET)) & ((@0 == PORTB) << @1)) | ((1 << ApFET) & ((@0 == PORTD) << @1))
-		sbi	@0, @1
-.else
-		cbi	@0, @1
-.endif
-.endmacro
-
 .macro AnFET_on
-		FET_on	PORTD, AnFET
+		sbi	PORTD, AnFET
 .endmacro
 .macro AnFET_off
-		FET_off	PORTD, AnFET
+		cbi	PORTD, AnFET
 .endmacro
 .macro ApFET_on
-		FET_on	ApFET_port, ApFET
+		cbi	PORTD, ApFET
 .endmacro
 .macro ApFET_off
-		FET_off	ApFET_port, ApFET
+		sbi	PORTD, ApFET
 .endmacro
 .macro BnFET_on
-		FET_on	PORTD, BnFET
+		sbi	PORTD, BnFET
 .endmacro
 .macro BnFET_off
-		FET_off	PORTD, BnFET
+		cbi	PORTD, BnFET
 .endmacro
 .macro BpFET_on
-		FET_on	BpFET_port, BpFET
+		cbi	PORTB, BpFET
 .endmacro
 .macro BpFET_off
-		FET_off	BpFET_port, BpFET
+		sbi	PORTB, BpFET
 .endmacro
 .macro CnFET_on
-		FET_on	PORTD, CnFET
+		sbi	PORTD, CnFET
 .endmacro
 .macro CnFET_off
-		FET_off	PORTD, CnFET
+		cbi	PORTD, CnFET
 .endmacro
 .macro CpFET_on
-		FET_on	CpFET_port, CpFET
+		cbi	PORTB, CpFET
 .endmacro
 .macro CpFET_off
-		FET_off	CpFET_port, CpFET
+		sbi	PORTB, CpFET
 .endmacro
 
 .macro all_pFETs_off
