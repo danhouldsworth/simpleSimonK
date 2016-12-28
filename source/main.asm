@@ -23,10 +23,10 @@
 .equ	CPWM_OVERHEAD_LOW = 9
 
 ; Minimum PWM on-time (too low and FETs won't turn on, hard starting)
-.equ	MIN_DUTY	= 56 * CPU_MHZ / 16
+.equ	MIN_DUTY	= 56 	; * CPU_MHZ / 16
 
 ; Number of PWM steps (too high and PWM frequency drops into audible range)
-.equ	POWER_RANGE	= 1000 * CPU_MHZ / 16 + MIN_DUTY
+.equ	POWER_RANGE	= 1000 + MIN_DUTY
 
 .equ	MAX_POWER	= (POWER_RANGE-1)
 .equ	PWR_COOL_START	= (POWER_RANGE/24) ; Power limit while starting to reduce heating
@@ -509,8 +509,8 @@ evaluate_rc:
 		brcc	puls_long_enough
 		ret
 puls_long_enough:
-		lds	YL, puls_low_l
-		lds	YH, puls_low_h
+		lds	YL, puls_low_l 		;
+		lds	YH, puls_low_h		;
 		sub	temp1, YL		; Offset input to neutral
 		sbc	temp2, YH
 		brcc	puls_plus
@@ -545,13 +545,13 @@ rc_no_set_duty:	ldi	temp1, 12		; More than 10 needed to arm
 ; Calculate the neutral offset and forward (and reverse) scaling factors
 ; to line up with the high/low (and neutral) pulse lengths.
 puls_scale:
-		lds	temp1, puls_low_l
-		lds	temp2, puls_low_h
+		lds	temp1, puls_low_l	; 0x80
+		lds	temp2, puls_low_h 	; 0x3e
 	; Find the distance to full throttle and fit it to match the
 	; distance between FULL_RC_PULS and STOP_RC_PULS by walking
 	; for the lowest 16.16 multiplier that just brings us in range.
-		lds	temp3, puls_high_l
-		lds	temp4, puls_high_h
+		lds	temp3, puls_high_l 	; 0x00
+		lds	temp4, puls_high_h 	; 0x7d
 		sub	temp3, temp1
 		sbc	temp4, temp2
 		rcall	puls_find_multiplicand
@@ -568,19 +568,17 @@ puls_scale:
 ; We preload temp1:temp2 with the weakest possible scale based on the
 ; fact that we can't accept a wider range than MAX_RC_PULS microseconds.
 puls_find_multiplicand:
-		ldi2	temp1, temp2, (POWER_RANGE - MIN_DUTY) * 65536 / (MAX_RC_PULS * CPU_MHZ)
+		ldi2	temp1, temp2, 1000 * 65536 / 32000
 puls_find1:	adiw	temp1, 1
 		wdr
-		cpi	temp2, 0xff
-		cpc	temp1, temp2
-		breq	puls_find_fail		; Return if we reached 0xffff
 	; Start with negative POWER_RANGE so that 0 is full throttle
-		ldi2	YL, YH, MIN_DUTY - POWER_RANGE
+		ldi2	YL, YH, -1000
 		rcall	mul_y_12x34
 	; We will always be increasing the result in steps of less than 1,
 	; so we can test for just zero rather than a range.
 		brne	puls_find1
 puls_find_fail:	ret
+
 ;-----bko-----------------------------------------------------------------
 update_timing:
 		cli
