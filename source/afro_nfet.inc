@@ -26,9 +26,6 @@
 .equ	INIT_PB		= (1 << BpFET) | (1 << CpFET)
 .equ	DIR_PB		= (1 << BpFET) | (1 << CpFET)
 
-.equ	BpFET_port	= PORTB
-.equ	CpFET_port	= PORTB
-
 ;*********************
 ; PORT C definitions *
 ;*********************
@@ -71,8 +68,3 @@
 
 .equ	INIT_PD		= (1 << ApFET)
 .equ	DIR_PD		= (1 << AnFET) | (1 << BnFET) | (1 << CnFET) | (1 << ApFET)
-
-.equ	AnFET_port	= PORTD
-.equ	BnFET_port	= PORTD
-.equ	CnFET_port	= PORTD
-.equ	ApFET_port	= PORTD

@@ -20,8 +20,8 @@
 .equ	MIN_RC_PULS	= 800	; Throw away any pulses shorter than this
 
 .equ	CPU_MHZ		= F_CPU / 1000000
-.equ	DEAD_TIME_LOW	= DEAD_LOW_NS * CPU_MHZ / 1000
-.equ	DEAD_TIME_HIGH	= DEAD_HIGH_NS * CPU_MHZ / 1000
+.equ	DEAD_TIME_LOW	= DEAD_LOW_NS * CPU_MHZ / 1000 	; 4.8
+.equ	DEAD_TIME_HIGH	= DEAD_HIGH_NS * CPU_MHZ / 1000 ; 4.8
 
 ; Minimum PWM on-time (too low and FETs won't turn on, hard starting)
 .equ	MIN_DUTY	= 56 * CPU_MHZ / 16
@@ -258,23 +258,7 @@ pwm_brake_off:
 		out	TCNT2, off_duty_l
 		reti
 
-.if DEAD_TIME_HIGH > 7
-.equ	EXTRA_DEAD_TIME_HIGH = DEAD_TIME_HIGH - 7
-.else
-.equ	EXTRA_DEAD_TIME_HIGH = 0
-.endif
-
 pwm_on_fast_high:
-.if EXTRA_DEAD_TIME_HIGH > MAX_BUSY_WAIT_CYCLES
-		in	i_sreg, SREG
-		dec	tcnt2h
-		brne	pwm_on_fast_high_again
-		ldi	ZL, pwm_on_fast
-pwm_on_fast_high_again:
-		out	SREG, i_sreg
-		reti
-.endif
-
 pwm_on_high:
 		in	i_sreg, SREG
 		dec	tcnt2h
@@ -297,25 +281,8 @@ pwm_on:
 		BpFET_off
 		sbrc	flags2, C_FET
 		CpFET_off
-.if EXTRA_DEAD_TIME_HIGH > MAX_BUSY_WAIT_CYCLES
-		; Reschedule to interrupt once the dead time has passed
-	.if high(EXTRA_DEAD_TIME_HIGH)
-		ldi	i_temp1, high(EXTRA_DEAD_TIME_HIGH)
-		mov	tcnt2h, i_temp1
-		ldi	ZL, pwm_on_fast_high
-	.else
-		ldi	ZL, pwm_on_fast
-	.endif
-		ldi	i_temp1, 0xff - low(EXTRA_DEAD_TIME_HIGH)
-		out	TCNT2, i_temp1
-		reti				; Do something else while we wait
-		.equ	CPWM_OVERHEAD_HIGH = 7 + 8 + EXTRA_DEAD_TIME_HIGH
-.else
-		; Waste cycles to wait for the dead time
-		cycle_delay EXTRA_DEAD_TIME_HIGH
-		.equ	CPWM_OVERHEAD_HIGH = 7 + EXTRA_DEAD_TIME_HIGH
+		.equ	CPWM_OVERHEAD_HIGH = 7
 		; Fall through
-.endif
 
 pwm_on_fast:
 		sbrc	flags2, A_FET
@@ -350,13 +317,7 @@ pwm_off:
 		out	TCNT2, off_duty_l	; 1 cycle
 		sbrc	flags2, SKIP_CPWM	; 2 cycles if skip, 1 cycle otherwise
 		reti
-	.if DEAD_TIME_LOW > 9
-		.equ	EXTRA_DEAD_TIME_LOW = DEAD_TIME_LOW - 9
-	.else
-		.equ	EXTRA_DEAD_TIME_LOW = 0
-	.endif
-		cycle_delay EXTRA_DEAD_TIME_LOW - 2
-		.equ	CPWM_OVERHEAD_LOW = 9 + EXTRA_DEAD_TIME_LOW
+		.equ	CPWM_OVERHEAD_LOW = 9
 		sbrc	flags2, A_FET
 		ApFET_on
 		sbrc	flags2, B_FET
