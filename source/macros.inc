@@ -162,7 +162,7 @@
 		CpFET_off
 .endmacro
 
-.macro all_nFETs_off
+.macro all_nFETs_off 		; 3clks vs 6above !!
 		in	@0, PORTD
 		cbr	@0, (1<<AnFET) | (1<<BnFET) | (1<<CnFET)
 		out	PORTD, @0
@@ -203,7 +203,6 @@
 .endmacro
 
 ;-----bko-----------------------------------------------------------------
-; *** commutation utilities ***
 
 .macro com1com2
 		; Bp off, Ap on
@@ -213,46 +212,13 @@
 		ApFET_on
 .endmacro
 
-.macro com2com1
-		; Bp on, Ap off
-		set_comp_phase_a
-		ApFET_off
-		sbrc	flags1, POWER_ON
-		BpFET_on
-.endmacro
-
 .macro com2com3
 		; Cn off, Bn on
-		set_comp_phase_c temp1
-		cli
+		set_comp_phase_c
 		cbr	flags2, ALL_FETS
-		sbr	flags2, (1<<B_FET)
-
+		sbr	flags2, (1<<B_FET) 	; could just do ldi if careful for 1clk vs 2
 		CpFET_off
-
-		in	temp1, PORTD
 		CnFET_off
-		in	temp2, PORTD
-		cpse	temp1, temp2
-		BnFET_on
-		sei
-.endmacro
-
-.macro com3com2
-		; Cn on, Bn off
-		set_comp_phase_b
-		cli
-		cbr	flags2, ALL_FETS
-		sbr	flags2, (1<<C_FET)
-
-		BpFET_off
-
-		in	temp1, PORTD
-		BnFET_off
-		in	temp2, PORTD
-		cpse	temp1, temp2
-		CnFET_on
-		sei
 .endmacro
 
 .macro com3com4
@@ -263,54 +229,74 @@
 		CpFET_on
 .endmacro
 
+.macro com4com5
+		; Bn off, An on
+		set_comp_phase_b
+		cbr	flags2, ALL_FETS
+		sbr	flags2, (1<<A_FET)
+		BpFET_off
+		BnFET_off
+.endmacro
+
+.macro com5com6
+		; Cp off, Bp on
+		set_comp_phase_c
+		CpFET_off
+		sbrc	flags1, POWER_ON
+		BpFET_on
+.endmacro
+
+.macro com6com1
+		; An off, Cn on
+		set_comp_phase_a
+		cbr	flags2, ALL_FETS
+		sbr	flags2, (1<<C_FET)
+		ApFET_off
+		AnFET_off
+.endmacro
+
+; REVERSE ORDER
+.macro com1com6
+		; An on, Cn off
+		set_comp_phase_c
+		cbr	flags2, ALL_FETS
+		sbr	flags2, (1<<A_FET)
+		CpFET_off
+		CnFET_off
+.endmacro
+
+.macro com2com1
+		; Bp on, Ap off
+		set_comp_phase_a
+		ApFET_off
+		sbrc	flags1, POWER_ON
+		BpFET_on
+.endmacro
+
+.macro com3com2
+		; Cn on, Bn off
+		set_comp_phase_b
+		cbr	flags2, ALL_FETS
+		sbr	flags2, (1<<C_FET)
+		BpFET_off
+		BnFET_off
+.endmacro
+
 .macro com4com3
 		; Ap on, Cp off
-		set_comp_phase_c temp1
+		set_comp_phase_c
 		CpFET_off
 		sbrc	flags1, POWER_ON
 		ApFET_on
 .endmacro
 
-.macro com4com5
-		; Bn off, An on
-		set_comp_phase_b
-		cli
-		cbr	flags2, ALL_FETS
-		sbr	flags2, (1<<A_FET)
-
-		BpFET_off
-
-		in	temp1, PORTD
-		BnFET_off
-		in	temp2, PORTD
-		cpse	temp1, temp2
-		AnFET_on
-		sei
-.endmacro
-
 .macro com5com4
 		; Bn on, An off
 		set_comp_phase_a
-		cli
 		cbr	flags2, ALL_FETS
 		sbr	flags2, (1<<B_FET)
-
 		ApFET_off
-
-		in	temp1, PORTD
 		AnFET_off
-		in	temp2, PORTD
-		cpse	temp1, temp2
-		BnFET_on
-		sei
-.endmacro
-
-.macro com5com6
-		; Cp off, Bp on
-		set_comp_phase_c temp1
-		CpFET_off
-		sbrc	flags1, POWER_ON
-		BpFET_on
 .endmacro
 
 .macro com6com5
@@ -319,40 +305,6 @@
 		BpFET_off
 		sbrc	flags1, POWER_ON
 		CpFET_on
-.endmacro
-
-.macro com6com1
-		; An off, Cn on
-		set_comp_phase_a
-		cli
-		cbr	flags2, ALL_FETS
-		sbr	flags2, (1<<C_FET)
-
-		ApFET_off
-
-		in	temp1, PORTD
-		AnFET_off
-		in	temp2, PORTD
-		cpse	temp1, temp2
-		CnFET_on
-		sei
-.endmacro
-
-.macro com1com6
-		; An on, Cn off
-		set_comp_phase_c temp1
-		cli
-		cbr	flags2, ALL_FETS
-		sbr	flags2, (1<<A_FET)
-
-		CpFET_off
-
-		in	temp1, PORTD
-		CnFET_off
-		in	temp2, PORTD
-		cpse	temp1, temp2
-		AnFET_on
-		sei
 .endmacro
 
 .MACRO RED_on

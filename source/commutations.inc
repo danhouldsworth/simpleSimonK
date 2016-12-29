@@ -17,7 +17,7 @@
 ; between the reti and the next interrupt vector execution, which still
 ; takes a good 4 (reti) + 4 (interrupt call) + 2 (ijmp) cycles. We also
 ; try to keep the switch on close to the start of pwm_on and switch off
-; close to the end of pwm_aff to minimize the power bump at full power.
+; close to the end of pwm_off to minimize the power bump at full power.
 ;
 ; pwm_*_high and pwm_again are called when the particular on/off cycle
 ; is longer than will fit in 8 bits. This is tracked in tcnt2h.
@@ -232,7 +232,7 @@ update_timing:
 		ror	sys_control_l
 update_timing1:
 		ldi2	XL, XH, MAX_POWER
-update_timing4:	movw	timing_duty_l, XL
+		movw	timing_duty_l, XL
 
 		sts	timing_l, temp1		; Store timing (120 degrees)
 		sts	timing_h, temp2
@@ -256,10 +256,11 @@ update_timing4:	movw	timing_duty_l, XL
 
 		sbrc	flags1, EVAL_RC
 		rjmp	evaluate_rc		; Set new duty either way
+		; fall through to set_new_duty
 ;-----bko-----------------------------------------------------------------
-; Unlike update_timing above, we try not to clobber XL, XH used as a loop
+; set_new_duty:	Unlike update_timing above, we try not to clobber XL, XH used as a loop
 ; counter in wait_for_edge.
-set_new_duty:	lds	YL, rc_duty_l
+		lds	YL, rc_duty_l
 		lds	YH, rc_duty_h
 set_new_duty_l:	cp	YL, timing_duty_l
 		cpc	YH, timing_duty_h
