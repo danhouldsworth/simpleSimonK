@@ -53,7 +53,8 @@
 .equ	MIN_RC_PULS	= 900	; Throw away any pulses shorter than this
 
 .equ	CPU_MHZ		= 16 	; Ticks per us
-.equ	CPWM_OVERHEAD_LOW = 9
+.equ	CPWM_OVERHEAD_LOW 	= 9
+.equ	CPWM_OVERHEAD_HIGH 	= 7
 
 ; Minimum PWM on-time (too low and FETs won't turn on, hard starting)
 .equ	MIN_DUTY	= 56 	; * CPU_MHZ / 16

@@ -26,7 +26,7 @@ pwm_brake_on:
 		cpse	tcnt2h, ZH
 		rjmp	pwm_again
 		in	i_sreg, SREG
-		nFET_brake i_temp1
+		nFET_brake
 		ldi	i_temp1, 0xff
 		cp	off_duty_l, i_temp1	; Check for 0 off-time
 		cpc	off_duty_h, ZH
@@ -80,8 +80,6 @@ pwm_on:
 		BpFET_off
 		sbrc	flags2, C_FET
 		CpFET_off
-		.equ	CPWM_OVERHEAD_HIGH = 7
-		; Fall through
 
 pwm_on_fast:
 		sbrc	flags2, A_FET

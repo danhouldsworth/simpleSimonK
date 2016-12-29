@@ -169,9 +169,9 @@
 .endmacro
 
 .macro nFET_brake
-		in	@0, PORTD
-		sbr	@0, (1<<AnFET) | (1<<BnFET) | (1<<CnFET)
-		out	PORTD, @0
+		in	i_temp1, PORTD
+		sbr	i_temp1, (1<<AnFET) | (1<<BnFET) | (1<<CnFET)
+		out	PORTD, i_temp1
 .endmacro
 
 ;-- Analog comparator sense macros ---------------------------------------
