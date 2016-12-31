@@ -98,7 +98,8 @@ rcpint_exit:	outi	TCCR1B, T1CLK 		; Set next int to rising edge
 		reti
 
 ;-----bko-----------------------------------------------------------------
-reset:		clr	r0
+reset:
+		clr	r0
 		out	SREG, r0		; Clear interrupts and flags
 		ldi2	ZL, ZH, RAMEND 		; Set up stack
 		out	SPH, ZH

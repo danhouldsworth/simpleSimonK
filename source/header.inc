@@ -115,11 +115,10 @@
 .def	flags1		= r17	; state flags
 	.equ	POWER_ON	= 0	; if set, switching fets is enabled
 	.equ	FULL_POWER	= 1	; 100% on - don't switch off, but do OFF_CYCLE working
-	.equ	SKIP_CPWM	= 7	; if set, skip complementary PWM (for short off period)
+	.equ	SKIP_CPWM	= 2	; if set, skip complementary PWM (for short off period)
 	.equ	EVAL_RC		= 4	; if set, evaluate rc command while waiting for OCT1
 	.equ	ACO_EDGE_HIGH	= 5	; if set, looking for ACO high - same bit position as ACO
 	.equ	STARTUP		= 6	; if set, startup-phase is active
-;	.equ	REVERSE		= 7	; if set, do reverse commutation
 .def	flags2		= r18
 	.equ	A_FET		= 0	; if set, A FET is being PWMed
 	.equ	B_FET		= 1	; if set, B FET is being PWMed
