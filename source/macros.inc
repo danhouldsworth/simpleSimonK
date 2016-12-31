@@ -1,27 +1,6 @@
 ;-- Instruction extension macros -----------------------------------------
-;
 ; macros.inc
-;
 ;--------------------------------------------------------------------------
-
-; Add any 16-bit immediate to a register pair (@0:@1 += @2), no Z flag
-.macro adi2
-	.if byte1(-@2)
-		subi	@0, byte1(-@2)
-		sbci	@1, byte1(-byte2(@2 + 0xff))
-	.else
-		subi	@1, byte1(-byte2(@2 + 0xff))
-	.endif
-.endmacro
-
-; Smaller version for r24 and above, Z flag not reliable
-.macro adiwx
-	.if (@2) & ~0x3f
-		adi2	@0, @1, @2
-	.else
-		adiw	@0, @2
-	.endif
-.endmacro
 
 ; Compare any 16-bit immediate from a register pair (@0:@1 -= @2, maybe clobbering @3)
 .macro cpiz2

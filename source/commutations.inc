@@ -439,17 +439,6 @@ i_rc_puls_rx:	rcall	evaluate_rc
 		cp	rc_timeout, temp1
 		brlo	i_rc_puls2
 
-		rcall 	beep_f1 		; signal: rcpuls ready [Custom tune!]
-		rcall 	beep_f2
-		rcall 	beep_f1
-		rcall 	beep_f2
-		rcall 	beep_f3
-		rcall 	beep_f2
-		rcall 	beep_f3
-		rcall 	beep_f4
-		rcall 	beep_f3
-		rcall 	beep_f4
-
 ;-----bko-----------------------------------------------------------------
 restart_control:
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
@@ -485,11 +474,6 @@ wait_for_power_on:
 		tst	rc_timeout
 		brne	wait_for_power_on	; Tight loop unless rc_timeout is zero
 		rcall	switch_power_off	; Brake may have been on
-		rcall	wait30ms
-		rcall 	beep_f4 		; Play beeps for signal lost, disarming
-		rcall	beep_f3 		; [Custom Tune!]
-		rcall	beep_f2
-		rcall 	beep_f1
 		rjmp	control_disarm		; Do not start motor until neutral signal received once again
 wait_for_power_rx:
 		rcall	evaluate_rc		; Only get rc_duty, don't set duty
@@ -568,7 +552,7 @@ run1:
 		inc	temp1
 		sts	goodies, temp1
 		; Build up sys_control to PWR_MAX_START in steps.
-		adiwx	YL, YH, (POWER_RANGE + 47) / 48
+		adiw	YL, (POWER_RANGE + 47) / 48
 		ldi2	temp1, temp2, PWR_MAX_START
 		; If we've been trying to start for a while,
 		; modulate power to reduce heating.
@@ -597,7 +581,7 @@ run6_2:
 		; Build up sys_control to MAX_POWER in steps.
 		; once running, sys_control
 		; will stay at MAX_POWER unless timing is lost.
-		adiwx	YL, YH, (POWER_RANGE + 31) / 32
+		adiw	YL, (POWER_RANGE + 31) / 32
 		ldi2	temp1, temp2, MAX_POWER
 run6_3:		cp	YL, temp1
 		cpc	YH, temp2

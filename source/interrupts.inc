@@ -63,7 +63,10 @@ rising_edge:
 		; Stuff this rise time plus MAX_RC_PULS into OCR1B.
 		; We use this both to save the time it went high and
 		; to get an interrupt to indicate high timeout.
-		adiwx	i_temp1, i_temp2, MAX_RC_PULS * CPU_MHZ
+		ldi 	i_temp3, low(MAX_RC_PULS * CPU_MHZ)
+		add 	i_temp1, i_temp3
+		ldi 	i_temp3, high(MAX_RC_PULS * CPU_MHZ)
+		adc 	i_temp2, i_temp3
 		out	OCR1BH, i_temp2
 		out	OCR1BL, i_temp1
 		outi	TCCR1B, T1CLK & ~(1<<ICES1) 	; Set next int to falling edge
@@ -130,8 +133,6 @@ clear_loop1:	cp	ZL, r0
 		out	TIFR, temp1		; Clear TOIE1, OCIE1A, and TOIE2 flags
 		out	TIMSK, temp1		; Enable t1ovfl_int, t1oca_int, t2ovfl_int
 
-		rcall	wait30ms		; Wait for power to settle -- this must be no longer than 64ms
-
 	; set up SRAM parameters
 		stsi 	puls_high_l, low(32000) ; FULL_RC_PULS * CPU_MHZ
 		stsi 	puls_high_h, high(32000)
@@ -140,5 +141,20 @@ clear_loop1:	cp	ZL, r0
 		stsi 	fwd_scale_l, low(4096) 	; (POWER_RANGE - MIN_DUTY) * 65536 / (1000us * 16MHz)
 		stsi 	fwd_scale_h, high(4096)
 		stsi 	brake_sub, 0xff 	; BRAKE_SPEED fastest
+
+	; Wait for power to settle -- this must be no longer than 64ms
+wait30ms:	ldi	temp2, 15
+wait2ms:	ldi	temp3, CPU_MHZ
+wait2:		out	TCNT0, ZH
+		ldi	temp1, (1<<TOV0)	; Clear TOV0 by setting it
+		out	TIFR, temp1
+		wdr
+wait3:		in	temp1, TIFR
+		sbrs	temp1, TOV0
+		rjmp	wait3
+		dec	temp3
+		brne	wait2
+		dec	temp2
+		brne	wait2ms
 
 		rjmp	control_start
