@@ -1,3 +1,4 @@
+
 ;-----bko-----------------------------------------------------------------
 ; Timer2 overflow interrupt (output PWM) -- the interrupt vector actually
 ; "ijmp"s to Z, which should point to one of these entry points.
@@ -112,7 +113,7 @@ pwm_off:
 		sbrc	flags2, C_FET
 		CnFET_off
 		out	TCNT2, off_duty_l	; 1 cycle
-		sbrc	flags2, SKIP_CPWM	; 2 cycles if skip, 1 cycle otherwise
+		sbrc	flags1, SKIP_CPWM	; 2 cycles if skip, 1 cycle otherwise
 		reti
 		sbrc	flags2, A_FET
 		ApFET_on
@@ -127,7 +128,11 @@ evaluate_rc:
 		cbr	flags1, (1<<EVAL_RC)
 		sts	brake_want, ZH
 		movw	temp1, rx_l		; Atomic copy of rc pulse length
-		cpi2	temp1, temp2, MIN_RC_PULS * CPU_MHZ, temp3
+
+		cpi	temp1, byte1(MIN_RC_PULS * CPU_MHZ) ; (temp1:2 == MIN_RC_PULS) ?
+		ldi	temp3, byte2(MIN_RC_PULS * CPU_MHZ)
+		cpc	temp2, temp3
+
 		brcc	puls_long_enough
 		ret
 puls_long_enough:
@@ -167,7 +172,10 @@ mul_y_12x34:
 		add	YL, temp5
 		adc	YH, temp6		; Product is now in Y, flags set
 
-		cpi2	YL, YH, MAX_POWER, temp1
+		cpi	YL, 	byte1(MAX_POWER); (YL:YH == MAX_POWER)?
+		ldi	temp1, 	byte2(MAX_POWER)
+		cpc	YH, temp1
+
 		brcs	rc_duty_set
 		ldi2	YL, YH, MAX_POWER
 rc_duty_set:	sts	rc_duty_l, YL
@@ -223,7 +231,11 @@ update_timing:
 		sbc	temp3, temp4
 
 	; Limit maximum RPM (fastest timing)
-		cpi3	temp1, temp2, temp3, TIMING_MAX * CPU_MHZ / 2, temp4
+		cpi	temp1, byte1(TIMING_MAX * CPU_MHZ / 2) ; (temp1:2:3 === TIMING_MAX)?
+		ldi	temp4, byte2(TIMING_MAX * CPU_MHZ / 2)
+		cpc	temp2, temp4
+		cpc	temp3, ZH
+
 		brcc	update_timing1
 		ldi3	temp1, temp2, temp3, TIMING_MAX * CPU_MHZ / 2
 		lsr	sys_control_h		; limit by reducing power
@@ -293,10 +305,13 @@ set_new_duty_set:
 		ldi	temp4, pwm_on_fast	; Short off period: skip complementary PWM
 		cpse	temp2, ZH
 		ldi	temp4, pwm_on_fast_high	; Off period >= 0x100
-		cpi2	temp1, temp2, CPWM_OVERHEAD_HIGH + CPWM_OVERHEAD_LOW, temp3
+		; 16 bit compare
+		cpi 	temp1, byte1(CPWM_OVERHEAD_HIGH + CPWM_OVERHEAD_LOW)
+		cpc 	temp2, ZH
+
 		brcs	set_new_duty21		; Off period < off-to-on cycle count plus interrupt overhead
 		clt				; Not short off period, unset SKIP_CPWM
-		sbiwx	temp1, temp2, CPWM_OVERHEAD_HIGH
+		sbiw	temp1, CPWM_OVERHEAD_HIGH ; temp1:temp2
 		ldi	temp4, pwm_on		; Off period < 0x100
 		cpse	temp2, ZH
 		ldi	temp4, pwm_on_high	; Off period >= 0x100
@@ -307,7 +322,7 @@ set_new_duty21:
 		cli				; Critical section (off_duty & flags together)
 		movw	off_duty_l, temp1	; Set new OFF duty for PWM interrupt
 		sts	pwm_on_ptr, temp4	; Set Next PWM ON interrupt vector
-		bld	flags2, SKIP_CPWM	; If to skip complementary PWM
+		bld	flags1, SKIP_CPWM	; If to skip complementary PWM
 		sei
 		ret
 set_new_duty_full:
@@ -794,7 +809,7 @@ wait_commutation:
 ; This will stretch out short commutations caused by the comparator
 ; sitting low or high when inputs are below the minimum offset.
 wait_startup:
-		ldi3	YL, YH, temp4, START_DELAY_US * CPU_MHZ
+		ldi3	YL, YH, temp4, 0	; (START_DELAY_US) = 0
 		mov	temp7, temp4
 		lds	temp1, goodies
 		cpi	temp1, 2		; After some good commutations,

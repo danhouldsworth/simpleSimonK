@@ -72,7 +72,6 @@
 .equ	TIMING_MAX	= 0x00e0 ; 56us per commutation
 
 .equ	TIMEOUT_START	= 48000	; Timeout per commutation for ZC during starting
-.equ	START_DELAY_US	= 0	; Initial post-commutation wait during starting
 .equ	START_DSTEP_US	= 8	; Microseconds per start delay step
 .equ	START_DELAY_INC	= 15	; Wait step count increase (wraps in a byte)
 .equ	START_MOD_INC	= 4	; Start power modulation step count increase (wraps in a byte)
@@ -110,16 +109,10 @@
 .def	flags0		= r16	; state flags
 	.equ	OCT1_PENDING	= 0	; if set, output compare interrupt is pending
 	.equ	SET_DUTY	= 1	; if set when armed, set duty during evaluate_rc
-;	.equ	I_pFET_HIGH	= 2	; set if over-current detect
-;	.equ	GET_STATE	= 3	; set if state is to be send
-;	.equ	EEPROM_RESET	= 4	; if set, reset EEPROM
-;	.equ	EEPROM_WRITE	= 5	; if set, save settings to EEPROM
-;	.equ	UART_SYNC	= 6	; if set, we are waiting for our serial throttle byte
-;	.equ	NO_CALIBRATION	= 7	; if set, disallow calibration (unsafe reset cause)
 .def	flags1		= r17	; state flags
 	.equ	POWER_ON	= 0	; if set, switching fets is enabled
 	.equ	FULL_POWER	= 1	; 100% on - don't switch off, but do OFF_CYCLE working
-;	.equ	I2C_MODE	= 2	; if receiving updates via I2C
+	.equ	SKIP_CPWM	= 2	; if set, skip complementary PWM (for short off period)
 ;	.equ	UART_MODE	= 3	; if receiving updates via UART
 	.equ	EVAL_RC		= 4	; if set, evaluate rc command while waiting for OCT1
 	.equ	ACO_EDGE_HIGH	= 5	; if set, looking for ACO high - same bit position as ACO
@@ -129,8 +122,6 @@
 	.equ	A_FET		= 0	; if set, A FET is being PWMed
 	.equ	B_FET		= 1	; if set, B FET is being PWMed
 	.equ	C_FET		= 2	; if set, C FET is being PWMed
-	.equ	ALL_FETS	= (1 << A_FET) | (1 << B_FET) | (1 << C_FET)
-	.equ	SKIP_CPWM	= 7	; if set, skip complementary PWM (for short off period)
 .def	i_temp3		= r19		; interrupt temporary
 .def	i_temp1		= r20		; interrupt temporary
 .def	i_temp2		= r21		; interrupt temporary
