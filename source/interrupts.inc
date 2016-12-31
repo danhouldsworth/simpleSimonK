@@ -88,7 +88,8 @@ falling_edge:
 		movw	rx_l, i_temp1		; Guaranteed to be valid, store immediately
 		in	i_temp1, OCR1BL		; No atomic temp register used to read OCR1* registers
 		in	i_temp2, OCR1BH
-		sbi2	i_temp1, i_temp2, MAX_RC_PULS * CPU_MHZ	; Put back to start time
+		subi 	i_temp1, byte1(MAX_RC_PULS * CPU_MHZ)	; Put back to start time
+		sbci 	i_temp2, byte2(MAX_RC_PULS * CPU_MHZ)	; Put back to start time
 		sub	rx_l, i_temp1		; Subtract start time from current time
 		sbc	rx_h, i_temp2
 		sbr	flags1, (1<<EVAL_RC)
@@ -145,15 +146,15 @@ clear_loop1:	cp	ZL, r0
 	; Wait for power to settle -- this must be no longer than 64ms
 wait30ms:	ldi	temp2, 15
 wait2ms:	ldi	temp3, CPU_MHZ
-wait2:		out	TCNT0, ZH
+wait_outer:	out	TCNT0, ZH
 		ldi	temp1, (1<<TOV0)	; Clear TOV0 by setting it
 		out	TIFR, temp1
 		wdr
-wait3:		in	temp1, TIFR
+wait_inner:	in	temp1, TIFR
 		sbrs	temp1, TOV0
-		rjmp	wait3
+		rjmp	wait_inner
 		dec	temp3
-		brne	wait2
+		brne	wait_outer
 		dec	temp2
 		brne	wait2ms
 

@@ -1,3 +1,6 @@
+;-- Device ----------------------------------------------------------------
+.include "m8def.inc"
+
 ;*********************
 ; PORT B definitions *
 ;*********************
@@ -49,8 +52,8 @@
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 .equ	ARM_TOT		= 10	; Number of 65536us periods must recieve ARM pulse
 
-.equ	MAX_RC_PULS	= 2050	; Throw away any pulses longer than this
-.equ	MIN_RC_PULS	= 950	; Throw away any pulses shorter than this
+.equ	MAX_RC_PULS	= 2100	; Throw away any pulses longer than this
+.equ	MIN_RC_PULS	= 900	; Throw away any pulses shorter than this
 
 .equ	CPU_MHZ		= 16 	; Ticks per us
 .equ	CPWM_OVERHEAD_LOW 	= 9
@@ -72,7 +75,6 @@
 .equ	TIMING_MAX	= 0x00e0 ; 56us per commutation
 
 .equ	TIMEOUT_START	= 48000	; Timeout per commutation for ZC during starting
-.equ	START_DELAY_US	= 0	; Initial post-commutation wait during starting
 .equ	START_DSTEP_US	= 8	; Microseconds per start delay step
 .equ	START_DELAY_INC	= 15	; Wait step count increase (wraps in a byte)
 .equ	START_MOD_INC	= 4	; Start power modulation step count increase (wraps in a byte)
@@ -110,17 +112,10 @@
 .def	flags0		= r16	; state flags
 	.equ	OCT1_PENDING	= 0	; if set, output compare interrupt is pending
 	.equ	SET_DUTY	= 1	; if set when armed, set duty during evaluate_rc
-;	.equ	I_pFET_HIGH	= 2	; set if over-current detect
-;	.equ	GET_STATE	= 3	; set if state is to be send
-;	.equ	EEPROM_RESET	= 4	; if set, reset EEPROM
-;	.equ	EEPROM_WRITE	= 5	; if set, save settings to EEPROM
-;	.equ	UART_SYNC	= 6	; if set, we are waiting for our serial throttle byte
-;	.equ	NO_CALIBRATION	= 7	; if set, disallow calibration (unsafe reset cause)
 .def	flags1		= r17	; state flags
 	.equ	POWER_ON	= 0	; if set, switching fets is enabled
 	.equ	FULL_POWER	= 1	; 100% on - don't switch off, but do OFF_CYCLE working
-;	.equ	I2C_MODE	= 2	; if receiving updates via I2C
-;	.equ	UART_MODE	= 3	; if receiving updates via UART
+	.equ	SKIP_CPWM	= 7	; if set, skip complementary PWM (for short off period)
 	.equ	EVAL_RC		= 4	; if set, evaluate rc command while waiting for OCT1
 	.equ	ACO_EDGE_HIGH	= 5	; if set, looking for ACO high - same bit position as ACO
 	.equ	STARTUP		= 6	; if set, startup-phase is active
@@ -129,8 +124,6 @@
 	.equ	A_FET		= 0	; if set, A FET is being PWMed
 	.equ	B_FET		= 1	; if set, B FET is being PWMed
 	.equ	C_FET		= 2	; if set, C FET is being PWMed
-	.equ	ALL_FETS	= (1 << A_FET) | (1 << B_FET) | (1 << C_FET)
-	.equ	SKIP_CPWM	= 7	; if set, skip complementary PWM (for short off period)
 .def	i_temp3		= r19		; interrupt temporary
 .def	i_temp1		= r20		; interrupt temporary
 .def	i_temp2		= r21		; interrupt temporary
@@ -145,3 +138,199 @@
 ; YH: general temporary
 ; ZL: Next PWM interrupt vector (low)
 ; ZH: Next PWM interrupt vector (high, stays at zero) -- used as "zero" register
+
+;-- FET driving macros ---------------------------------------------------
+.macro AnFET_on
+		sbi	PORTD, AnFET
+.endmacro
+.macro AnFET_off
+		cbi	PORTD, AnFET
+.endmacro
+.macro ApFET_on
+		cbi	PORTD, ApFET
+.endmacro
+.macro ApFET_off
+		sbi	PORTD, ApFET
+.endmacro
+.macro BnFET_on
+		sbi	PORTD, BnFET
+.endmacro
+.macro BnFET_off
+		cbi	PORTD, BnFET
+.endmacro
+.macro BpFET_on
+		cbi	PORTB, BpFET
+.endmacro
+.macro BpFET_off
+		sbi	PORTB, BpFET
+.endmacro
+.macro CnFET_on
+		sbi	PORTD, CnFET
+.endmacro
+.macro CnFET_off
+		cbi	PORTD, CnFET
+.endmacro
+.macro CpFET_on
+		cbi	PORTB, CpFET
+.endmacro
+.macro CpFET_off
+		sbi	PORTB, CpFET
+.endmacro
+
+.macro all_pFETs_off
+		ApFET_off
+		BpFET_off
+		CpFET_off
+.endmacro
+
+.macro all_nFETs_off 		; 3clks vs 6above !!
+		in	@0, PORTD
+		cbr	@0, (1<<AnFET) | (1<<BnFET) | (1<<CnFET)
+		out	PORTD, @0
+.endmacro
+
+.macro nFET_brake
+		in	i_temp1, PORTD
+		sbr	i_temp1, (1<<AnFET) | (1<<BnFET) | (1<<CnFET)
+		out	PORTD, i_temp1
+.endmacro
+
+;-- Analog comparator sense macros ---------------------------------------
+; We enable and disable the ADC to override ACME when one of the sense
+; pins is AIN1 instead of an ADC pin. In the future, this will allow
+; reading from the ADC at the same time.
+
+.macro comp_init
+		in	@0, SFIOR
+		sbr	@0, (1<<ACME)	; set Analog Comparator Multiplexer Enable
+		out	SFIOR, @0
+.endmacro
+.macro comp_adc_disable
+		cbi	ADCSRA, ADEN	; Disable ADC if we enabled it to get AIN1
+.endmacro
+.macro comp_adc_enable
+		sbi	ADCSRA, ADEN	; Enable ADC to effectively disable ACME
+.endmacro
+.macro set_comp_phase_a
+		outi	ADMUX, mux_a	; set comparator multiplexer to phase A
+		comp_adc_disable
+.endmacro
+.macro set_comp_phase_b
+		outi	ADMUX, mux_b	; set comparator multiplexer to phase B
+		comp_adc_disable
+.endmacro
+.macro set_comp_phase_c
+		comp_adc_enable
+.endmacro
+
+;-----bko-----------------------------------------------------------------
+
+.macro com1com2
+		; Bp off, Ap on
+		set_comp_phase_b
+		BpFET_off
+		sbrc	flags1, POWER_ON
+		ApFET_on
+.endmacro
+
+.macro com2com3
+		; Cn off, Bn on
+		set_comp_phase_c
+		ldi	flags2, (1<<B_FET) ; Clear all but this FET flag
+		CpFET_off
+		CnFET_off
+.endmacro
+
+.macro com3com4
+		; Ap off, Cp on
+		set_comp_phase_a
+		ApFET_off
+		sbrc	flags1, POWER_ON
+		CpFET_on
+.endmacro
+
+.macro com4com5
+		; Bn off, An on
+		set_comp_phase_b
+		ldi	flags2, (1<<A_FET) ; Clear all but this FET flag
+		BpFET_off
+		BnFET_off
+.endmacro
+
+.macro com5com6
+		; Cp off, Bp on
+		set_comp_phase_c
+		CpFET_off
+		sbrc	flags1, POWER_ON
+		BpFET_on
+.endmacro
+
+.macro com6com1
+		; An off, Cn on
+		set_comp_phase_a
+		ldi	flags2, (1<<C_FET) ; Clear all but this FET flag
+		ApFET_off
+		AnFET_off
+.endmacro
+
+; REVERSE ORDER
+.macro com1com6
+		; An on, Cn off
+		set_comp_phase_c
+		ldi	flags2, (1<<A_FET) ; Clear all but this FET flag
+		CpFET_off
+		CnFET_off
+.endmacro
+
+.macro com2com1
+		; Bp on, Ap off
+		set_comp_phase_a
+		ApFET_off
+		sbrc	flags1, POWER_ON
+		BpFET_on
+.endmacro
+
+.macro com3com2
+		; Cn on, Bn off
+		set_comp_phase_b
+		ldi	flags2, (1<<C_FET) ; Clear all but this FET flag
+		BpFET_off
+		BnFET_off
+.endmacro
+
+.macro com4com3
+		; Ap on, Cp off
+		set_comp_phase_c
+		CpFET_off
+		sbrc	flags1, POWER_ON
+		ApFET_on
+.endmacro
+
+.macro com5com4
+		; Bn on, An off
+		set_comp_phase_a
+		ldi	flags2, (1<<B_FET) ; Clear all but this FET flag
+		ApFET_off
+		AnFET_off
+.endmacro
+
+.macro com6com5
+		; Cp on, Bp off
+		set_comp_phase_b
+		BpFET_off
+		sbrc	flags1, POWER_ON
+		CpFET_on
+.endmacro
+
+.MACRO RED_on
+	sbi	DDRC, red_led
+.ENDMACRO
+.MACRO RED_off
+	cbi	DDRC, red_led
+.ENDMACRO
+.MACRO GRN_on
+	sbi	DDRC, green_led
+.ENDMACRO
+.MACRO GRN_off
+	cbi	DDRC, green_led
+.ENDMACRO
