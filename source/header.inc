@@ -50,7 +50,6 @@
 .equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
 
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
-.equ	ARM_TOT		= 10	; Number of 65536us periods must recieve ARM pulse
 
 .equ	MAX_RC_PULS	= 2100	; Throw away any pulses longer than this
 .equ	MIN_RC_PULS	= 900	; Throw away any pulses shorter than this

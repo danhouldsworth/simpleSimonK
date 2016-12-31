@@ -434,9 +434,6 @@ i_rc_puls_rx:	rcall	evaluate_rc
 		lds	YH, rc_duty_h
 		adiw	YL, 0			; Test for zero
 		brne	i_rc_puls1
-		ldi 	temp1, ARM_TOT		; wait for this count of receiving arm pulse
-		cp	rc_timeout, temp1
-		brlo	i_rc_puls2
 
 ;-----bko-----------------------------------------------------------------
 restart_control:
