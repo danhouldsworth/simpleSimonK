@@ -284,14 +284,6 @@ set_new_duty11:
 		; Not off and not full power
 		cbr	flags1, (1<<FULL_POWER)
 		sbr	flags1, (1<<POWER_ON)
-		; At higher PWM frequencies, halve the frequency
-		; when starting -- this helps hard drive startup
-		sbrs	flags1, STARTUP
-		rjmp	set_new_duty_set
-		lsl	temp1
-		rol	temp2
-		lsl	YL
-		rol	YH
 set_new_duty_set:
 		; When off duty is short, skip complementary PWM; otherwise,
 		; compensate the off_duty time to account for the overhead.
