@@ -1,5 +1,5 @@
 ;-- Device ----------------------------------------------------------------
-.include "m8def.inc"
+.include "../include/m8def.inc"
 
 ;*********************
 ; PORT B definitions *

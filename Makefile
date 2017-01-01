@@ -1,10 +1,14 @@
 # SHELL = /bin/bash
 
-all:
+asm:
 	avra -fI main.asm
 
+build:
+	avr-gcc 		-mmcu=ATmega8 -Wall -DF_CPU=16000000 main.c -o main.elf
+	avr-objcopy 	-O ihex main.elf main.hex
+
 clean:
-	-rm -f *.obj *.eep.hex *.eeprom *.hex *.cof
+	-rm -f *.obj *.eep.hex *.eeprom *.hex *.cof *.elf
 
 USB_flash:
 	avrdude -c usbasp -P usb -p m8 -U flash:w:main.hex:i

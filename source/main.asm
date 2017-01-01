@@ -35,5 +35,6 @@
 .include "interrupts.inc"
 ;-- MAIN ROUTINES ---------------------------------------------------------
 .include "commutations.inc"
+.include "RCinput.inc"
 ;--------------------------------------------------------------------------
 
