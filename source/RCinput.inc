@@ -53,10 +53,6 @@ rc_duty_set:	sts	rc_duty_l, YL
 		sts	rc_duty_h, YH
 		sbrs	flags0, SET_DUTY
 		rjmp	rc_no_set_duty
-		ldi	temp1, RCP_TOT
-		mov	rc_timeout, temp1	; Short rc_timeout when driving
 		rjmp	set_new_duty_l		; Skip reload into YL:YH
-rc_no_set_duty:	ldi	temp1, 12		; More than 10 needed to arm
-		cp	rc_timeout, temp1
-		adc	rc_timeout, ZH
+rc_no_set_duty:
 		ret

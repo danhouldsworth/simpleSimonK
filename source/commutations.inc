@@ -351,7 +351,7 @@ control_disarm:	GRN_off 			; LEDs off while disarmed
 
 		outi	TCCR1B, T1CLK 		; Set next ICP to rising edge
 
-i_rc_puls1:	clr	rc_timeout 		; Wait for arming input
+i_rc_puls1:	; Wait for arming input
 		cbr	flags1, (1<<EVAL_RC)
 i_rc_puls2:	wdr
 		sbrc	flags1, EVAL_RC
@@ -416,8 +416,6 @@ start_from_running:
 		; set POWER_ON.
 		rcall	wait_timeout_init
 		sts	start_delay, ZH
-		ldi	temp1, RCP_TOT		; Start with a short timeout to stop quickly
-		mov	rc_timeout, temp1	; if we see no further pulses after the first.
 		ldi	temp1, 6		; Do not enable FETs during first cycle to
 		sts	powerskip, temp1	; see if motor is running, and align to it.
 		ldi	temp1, ENOUGH_GOODIES	; If we can follow without a timeout, do not
@@ -651,11 +649,7 @@ wait_commutation:
 		lds	temp1, powerskip
 		cpse	temp1, ZH
 		cbr	flags1, (1<<POWER_ON)	; Disable power when powerskipping
-		cpse	rc_timeout, ZH
 		ret
-		pop	temp1			; Throw away return address
-		pop	temp1
-		rjmp	restart_control		; Restart control immediately on RC timeout
 
 ; When starting, we have no idea what sort of motor may be connected,
 ; or how much time it will take for the previous commutation current
