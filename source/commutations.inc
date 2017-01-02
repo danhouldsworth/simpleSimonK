@@ -31,7 +31,7 @@ pwm_brake_on:
 		cp	off_duty_l, i_temp1	; Check for 0 off-time
 		cpc	off_duty_h, ZH
 		breq	pwm_brake_on1
-		ldi	ZL, pwm_brake_off	; Not full on, so turn it off next
+		ldi	ZL, low(pwm_brake_off)	; Not full on, so turn it off next
 		lds	i_temp2, brake_sub
 		sub	sys_control_l, i_temp2
 		brne	pwm_brake_on1
@@ -51,7 +51,7 @@ pwm_brake_off:
 		cpse	tcnt2h, ZH
 		rjmp	pwm_again
 		in	i_sreg, SREG
-		ldi	ZL, pwm_brake_on
+		ldi	ZL, low(pwm_brake_on)
 		mov	tcnt2h, off_duty_h
 		all_nFETs_off i_temp1
 		out	SREG, i_sreg
@@ -63,7 +63,7 @@ pwm_on_high:
 		in	i_sreg, SREG
 		dec	tcnt2h
 		brne	pwm_on_again
-		ldi	ZL, pwm_on
+		ldi	ZL, low(pwm_on)
 pwm_on_again:	out	SREG, i_sreg
 		reti
 
@@ -88,7 +88,7 @@ pwm_on_fast:
 		BnFET_on
 		sbrc	flags2, C_FET
 		CnFET_on
-		ldi	ZL, pwm_off
+		ldi	ZL, low(pwm_off)
 		mov	tcnt2h, duty_h
 		out	TCNT2, duty_l
 		reti
@@ -451,7 +451,7 @@ startComplete:
 		; will stay at MAX_POWER unless timing is lost.
 		adiw	YL, (POWER_RANGE + 31) / 32
 		ldi2	temp1, temp2, MAX_POWER
-run6_3:		cp	YL, temp1
+		cp	YL, temp1
 		cpc	YH, temp2
 		brcs	lessThanMAX
 		movw	sys_control_l, temp1
