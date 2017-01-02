@@ -574,8 +574,6 @@ wait_pwm_running:
 waitUntilDemagged:
 		sbrs	flags0, OCT1_PENDING
 		rjmp	demag_timeout
-		sbrc	flags1, EVAL_RC
-		rcall	evaluate_rc
 		in	temp3, ACSR
 		eor	temp3, flags1
 		sbrc	temp3, ACO		; Check for opposite level (demagnetization)
@@ -616,8 +614,6 @@ wait_for_edge_fast:
 wait_for_edge1:	mov	XH, XL
 wait_for_edge2:	sbrs	flags0, OCT1_PENDING
 		rjmp	wait_timeout
-		sbrc	flags1, EVAL_RC
-		rcall	evaluate_rc
 		in	temp3, ACSR
 		eor	temp3, flags1
 		sbrc	temp3, ACO
