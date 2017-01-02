@@ -48,13 +48,13 @@ t1ovfl_int:	in	i_sreg, SREG
 ; (see "Accessing 16-bit registers" in the Atmel documentation)
 ; icp1 = rc pulse input, if enabled
 rcp_int:
+		in	i_sreg, SREG
 		in	i_temp1, ICR1L		; get captured timer values
 		in	i_temp2, ICR1H
 		in	i_temp3, TCCR1B
 		sbrs	i_temp3, ICES1		; evaluate edge of this interrupt
 		rjmp	falling_edge
 rising_edge:
-		in	i_sreg, SREG
 		; Stuff this rise time plus MAX_RC_PULS into OCR1B.
 		; We use this both to save the time it went high and
 		; to get an interrupt to indicate high timeout.
@@ -65,20 +65,12 @@ rising_edge:
 		out	OCR1BH, i_temp2
 		out	OCR1BL, i_temp1
 		outi	TCCR1B, T1CLK & ~(1<<ICES1) 	; Set next int to falling edge
-		ldi	i_temp1, (1<<OCF1B)		; Clear OCF1B flag
-		out	TIFR, i_temp1
+		outi	TIFR, (1<<OCF1B)		; Clear OCF1B flag
+
 		out	SREG, i_sreg
 		reti
 
-rcpint_fail:
-		in	i_sreg, SREG
-		rjmp	rcpint_exit
-
 falling_edge:
-		in	i_sreg, TIFR
-		sbrc	i_sreg, OCF1B		; Too long high would set OCF1B
-		rjmp	rcpint_fail
-		in	i_sreg, SREG
 		movw	rx_l, i_temp1		; Guaranteed to be valid, store immediately
 		in	i_temp1, OCR1BL		; No atomic temp register used to read OCR1* registers
 		in	i_temp2, OCR1BH
@@ -87,7 +79,8 @@ falling_edge:
 		sub	rx_l, i_temp1		; Subtract start time from current time
 		sbc	rx_h, i_temp2
 		sbr	flags1, (1<<EVAL_RC)
-rcpint_exit:	outi	TCCR1B, T1CLK 		; Set next int to rising edge
+		outi	TCCR1B, T1CLK 		; Set next int to rising edge
+
 		out	SREG, i_sreg
 		reti
 

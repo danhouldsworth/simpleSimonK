@@ -356,13 +356,13 @@ waitEVAL_RC:	wdr
 		brne	waitForValidAndZeroDutyToArm
 
 ;-----bko-----------------------------------------------------------------
-restart_control:
+startOrBrake:
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
 		cbr	flags0, (1<<SET_DUTY)	; Do not yet set duty on input
 		sts	brake_active, ZH	; No active brake
 		GRN_on				; Green on while armed and idle or braking
 		RED_off
-wait_for_power_on_init:
+waitWhileZeroThrottle:
 		lds	temp3, brake_want
 		lds	temp4, brake_active
 		cp	temp3, temp4
@@ -385,13 +385,11 @@ wait_for_power_on_init:
 
 wait_for_power_on:
 		wdr
-		sbrc	flags1, EVAL_RC
-		rjmp	wait_for_power_rx
-		rjmp	wait_for_power_on	; Tight loop
-wait_for_power_rx:
+		sbrs	flags1, EVAL_RC
+		rjmp	wait_for_power_on	; Tight loop waiting for RC
 		rcall	evaluate_rc		; Only get rc_duty, don't set duty
 		adiw	YL, 0			; Test for zero
-		breq	wait_for_power_on_init
+		breq	waitWhileZeroThrottle
 
 start_from_running:
 		rcall	switch_power_off
@@ -433,7 +431,7 @@ runLoop:
 
 		lds	temp1, brake_want
 		cpse	temp1, ZH
-		rjmp	restart_control
+		rjmp	startOrBrake
 		lds	temp1, goodies
 		movw	YL, sys_control_l
 		cpi	temp1, ENOUGH_GOODIES
@@ -510,11 +508,6 @@ wait_timeout_init:
 		sbr	flags1, (1<<STARTUP)	; Leave running mode
 		rjmp	wait_commutation	; Update timing and duty.
 ;-----bko-----------------------------------------------------------------
-wait_for_low:	cbr	flags1, (1<<ACO_EDGE_HIGH)
-		rjmp	wait_for_edge
-;-----bko-----------------------------------------------------------------
-wait_for_high:	sbr	flags1, (1<<ACO_EDGE_HIGH)
-;-----bko-----------------------------------------------------------------
 ; Here we wait for the zero-crossing on the undriven phase to synchronize
 ; with the motor timing. The voltage of the undriven phase should cross
 ; the average of all three phases at half of the way into the 60-degree
@@ -549,8 +542,10 @@ wait_for_high:	sbr	flags1, (1<<ACO_EDGE_HIGH)
 ; fall through to regular startup with ZC check count at 0xff. This lets
 ; us start from braking, RC timeout, or power-up without misaligning.
 ;
-wait_for_edge:
-		lds	temp1, powerskip	; Are we trying to track a maybe running motor?
+wait_for_low:	cbr	flags1, (1<<ACO_EDGE_HIGH)
+		rjmp	wait_for_edge
+wait_for_high:	sbr	flags1, (1<<ACO_EDGE_HIGH)
+wait_for_edge:	lds	temp1, powerskip	; Are we trying to track a maybe running motor?
 		subi	temp1, 1
 		brcs	wait_pwm_enable
 		sts	powerskip, temp1
@@ -576,7 +571,7 @@ wait_pwm_running:
 
 		ldi	temp4, 42 * 256 / 120
 		rcall	set_timing_degrees	; Set timeout for maximum blanking period
-wait_for_demag:
+waitUntilDemagged:
 		sbrs	flags0, OCT1_PENDING
 		rjmp	demag_timeout
 		sbrc	flags1, EVAL_RC
@@ -584,7 +579,7 @@ wait_for_demag:
 		in	temp3, ACSR
 		eor	temp3, flags1
 		sbrc	temp3, ACO		; Check for opposite level (demagnetization)
-		rjmp	wait_for_demag
+		rjmp	waitUntilDemagged
 wait_for_edge0:
 		rcall	load_timing
 		mov	XL, temp2		; Copy high and extended byte
