@@ -357,17 +357,17 @@ waitEVAL_RC:	wdr
 
 ;-----bko-----------------------------------------------------------------
 startOrBrake:
+		GRN_on				; Green on while armed and idle or braking
+		RED_off
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
 		cbr	flags0, (1<<SET_DUTY)	; Do not yet set duty on input
 		sts	brake_active, ZH	; No active brake
-		GRN_on				; Green on while armed and idle or braking
-		RED_off
-waitWhileZeroThrottle:
+
 		lds	temp3, brake_want
 		lds	temp4, brake_active
 		cp	temp3, temp4
-		breq	wait_for_power_on
-
+		breq	start_from_running
+; braking
 		rcall	switch_power_off	; Disable any active brake
 		sts	brake_active, temp3	; Set new brake_active to brake_want
 
@@ -383,15 +383,8 @@ waitWhileZeroThrottle:
 		clr	sys_control_l		; Abused as duty update divisor
 		outi	TCCR2, T2CLK		; Enable PWM, cleared later by switch_power_off
 
-wait_for_power_on:
-		wdr
-		sbrs	flags1, EVAL_RC
-		rjmp	wait_for_power_on	; Tight loop waiting for RC
-		rcall	evaluate_rc		; Only get rc_duty, don't set duty
-		adiw	YL, 0			; Test for zero
-		breq	waitWhileZeroThrottle
-
 start_from_running:
+		wdr
 		rcall	switch_power_off
 		comp_init temp1			; init comparator
 		RED_off
@@ -457,26 +450,6 @@ startComplete:
 lessThanMAX:	movw	sys_control_l, YL
 		rjmp	runLoop
 
-;-----bko-----------------------------------------------------------------
-demag_timeout:
-		ldi	ZL, low(pwm_wdr)	; Stop PWM switching
-		; Interrupts will not turn on any FETs now
-		; Turn off complementary PWM if it was on,
-		; but leave on the high side commutation FET.
-		sbrc	flags2, A_FET
-		ApFET_off
-		sbrc	flags2, B_FET
-		BpFET_off
-		sbrc	flags2, C_FET
-		CpFET_off
-		all_nFETs_off temp1
-		RED_on
-		; Skip power for the next commutation. Note that we can't
-		; decrement powerskip because demag checking is skipped
-		; when powerskip is non-zero.
-		ldi	temp1, 1
-		sts	powerskip, temp1
-		rjmp	wait_commutation
 ;-----bko-----------------------------------------------------------------
 wait_timeout:
 		sbrc	flags1, STARTUP
@@ -572,8 +545,6 @@ wait_pwm_running:
 		ldi	temp4, 42 * 256 / 120
 		rcall	set_timing_degrees	; Set timeout for maximum blanking period
 waitUntilDemagged:
-		sbrs	flags0, OCT1_PENDING
-		rjmp	demag_timeout
 		in	temp3, ACSR
 		eor	temp3, flags1
 		sbrc	temp3, ACO		; Check for opposite level (demagnetization)
