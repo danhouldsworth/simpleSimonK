@@ -343,7 +343,6 @@ switch_power_off:
 		all_nFETs_off temp1
 		ret
 ;-----bko-----------------------------------------------------------------
-
 waitForValidAndZeroDutyToArm:
 		cbr	flags1, (1<<EVAL_RC)
 waitEVAL_RC:	wdr
@@ -355,22 +354,17 @@ waitEVAL_RC:	wdr
 		adiw	YL, 0			; Test for zero
 		brne	waitForValidAndZeroDutyToArm
 
-;-----bko-----------------------------------------------------------------
 startOrBrake:
 		GRN_on				; Green on while armed and idle or braking
 		RED_off
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
 		cbr	flags0, (1<<SET_DUTY)	; Do not yet set duty on input
-		sts	brake_active, ZH	; No active brake
 
 		lds	temp3, brake_want
-		lds	temp4, brake_active
-		cp	temp3, temp4
+		cp	temp3, ZH
 		breq	start_from_running
 ; braking
 		rcall	switch_power_off	; Disable any active brake
-		sts	brake_active, temp3	; Set new brake_active to brake_want
-
 		ldi2	YL, YH, BRAKE_POWER
 
 		;set_brake_duty
@@ -401,12 +395,7 @@ start_from_running:
 		sts	start_delay, ZH
 		ldi	temp1, 6		; Do not enable FETs during first cycle to
 		sts	powerskip, temp1	; see if motor is running, and align to it.
-		ldi	temp1, ENOUGH_GOODIES	; If we can follow without a timeout, do not
-		sts	goodies, temp1		; continue in startup mode (long ZC filtering).
 		outi	TCCR2, T2CLK		; Enable PWM (ZL has been set to pwm_wdr)
-
-;-----bko-----------------------------------------------------------------
-; **** running control loop ****
 
 runLoop:
 		rcall	wait_for_high
@@ -521,7 +510,7 @@ wait_for_high:	sbr	flags1, (1<<ACO_EDGE_HIGH)
 wait_for_edge:	lds	temp1, powerskip	; Are we trying to track a maybe running motor?
 		subi	temp1, 1
 		brcs	wait_pwm_enable
-		sts	powerskip, temp1
+		sts	powerskip, temp1 	; powerskip--
 		sbrs	flags1, STARTUP
 		rjmp	wait_for_edge0
 		ldi	YL, byte1(0xff * 0x100)	; Timing is 120 degrees, so wait for
