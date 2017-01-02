@@ -71,8 +71,6 @@
 
 .equ	BRAKE_POWER	= MAX_POWER*2/3	; Brake force is exponential, so start fairly high
 
-.equ	TIMING_MAX	= 0x00e0 ; 56us per commutation
-
 .equ	TIMEOUT_START	= 48000	; Timeout per commutation for ZC during starting
 .equ	START_DSTEP_US	= 8	; Microseconds per start delay step
 .equ	START_DELAY_INC	= 15	; Wait step count increase (wraps in a byte)

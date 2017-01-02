@@ -163,16 +163,6 @@ update_timing:
 		sbc	temp2, temp6
 		sbc	temp3, temp4
 
-	; Limit maximum RPM (fastest timing)
-		cpi	temp1, byte1(TIMING_MAX * CPU_MHZ / 2) ; (temp1:2:3 === TIMING_MAX)?
- 		ldi	temp4, byte2(TIMING_MAX * CPU_MHZ / 2)
- 		cpc	temp2, temp4
- 		cpc	temp3, ZH
-		brcc	update_timing1
-		ldi3	temp1, temp2, temp3, TIMING_MAX * CPU_MHZ / 2
-		lsr	sys_control_h		; limit by reducing power
-		ror	sys_control_l
-update_timing1:
 		ldi2	XL, XH, MAX_POWER
 		movw	timing_duty_l, XL
 
@@ -478,9 +468,7 @@ run1:
 		cpse	temp1, ZH
 		rjmp	run_to_brake
 		lds	temp1, goodies
-		movw	YL, sys_control_l	; Each time TIMING_MAX is hit, sys_control is lsr'd
-		adiw	YL, 0			; If zero, try starting over (with powerskipping)
-		breq	restart_run
+		movw	YL, sys_control_l
 		cpi	temp1, ENOUGH_GOODIES
 		brcc	run6_2
 		inc	temp1
