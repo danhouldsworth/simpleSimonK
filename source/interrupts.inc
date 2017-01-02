@@ -140,7 +140,7 @@ clear_loop1:	cp	ZL, r0
 		stsi 	puls_high_h, high(32000)
 		stsi 	puls_low_l, low(16000)
 		stsi 	puls_low_h, high(16000)
-		stsi 	fwd_scale_l, low(4096) 	; (POWER_RANGE - MIN_DUTY) * 65536 / (1000us * 16MHz)
+		stsi 	fwd_scale_l, low(4096) 	; (POWER_RANGE - MIN_DUTY) * 0xffff / (1000us * 16MHz)
 		stsi 	fwd_scale_h, high(4096)
 		stsi 	brake_sub, 0xff 	; BRAKE_SPEED fastest
 
