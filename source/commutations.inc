@@ -395,15 +395,10 @@ wait_for_power_on:
 		wdr
 		sbrc	flags1, EVAL_RC
 		rjmp	wait_for_power_rx
-		tst	rc_timeout
-		brne	wait_for_power_on	; Tight loop unless rc_timeout is zero
-		rcall	switch_power_off	; Brake may have been on
-		rjmp	control_disarm		; Do not start motor until neutral signal received once again
+		rjmp	wait_for_power_on	; Tight loop
 wait_for_power_rx:
 		rcall	evaluate_rc		; Only get rc_duty, don't set duty
 		adiw	YL, 0			; Test for zero
-		breq	wait_for_power_on_init
-		tst	rc_timeout
 		breq	wait_for_power_on_init
 
 start_from_running:
@@ -433,7 +428,7 @@ start_from_running:
 ;-----bko-----------------------------------------------------------------
 ; **** running control loop ****
 
-run1:
+runLoop:
 		rcall	wait_for_high
 		com1com2
 		rcall	wait_for_low
@@ -449,11 +444,11 @@ run1:
 
 		lds	temp1, brake_want
 		cpse	temp1, ZH
-		rjmp	run_to_brake
+		rjmp	restart_control
 		lds	temp1, goodies
 		movw	YL, sys_control_l
 		cpi	temp1, ENOUGH_GOODIES
-		brcc	startComplete
+		brcc	startComplete 		; ELSE {goodies++; power += small step}
 		inc	temp1
 		sts	goodies, temp1
 		; Build up sys_control to PWR_MAX_START in steps.
@@ -469,14 +464,11 @@ startComplete:
 		ldi2	temp1, temp2, MAX_POWER
 run6_3:		cp	YL, temp1
 		cpc	YH, temp2
-		brcs	run6_4
+		brcs	lessThanMAX
 		movw	sys_control_l, temp1
-		rjmp	run1
-run6_4:		movw	sys_control_l, YL
-		rjmp	run1
-
-run_to_brake:	rjmp	restart_control
-restart_run:	rjmp	start_from_running
+		rjmp	runLoop
+lessThanMAX:	movw	sys_control_l, YL
+		rjmp	runLoop
 
 ;-----bko-----------------------------------------------------------------
 demag_timeout:
