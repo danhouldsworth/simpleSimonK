@@ -402,38 +402,12 @@ wait_for_power_on:
 wait_for_power_rx:
 		rcall	evaluate_rc		; Only get rc_duty, don't set duty
 		adiw	YL, 0			; Test for zero
-		breq	wait_for_power_on_init
-		tst	rc_timeout
-		breq	wait_for_power_on_init
-
-start_from_running:
-		rcall	switch_power_off
-		comp_init temp1			; init comparator
-		RED_off
-		GRN_off
-
-		ldi2	YL, YH, PWR_MIN_START	; Start with limited power to reduce the chance that we
-		movw	sys_control_l, YL	; align to a timing harmonic
-
-		sbr	flags0, (1<<SET_DUTY)
-		; Set STARTUP flag and call update_timing which will set
-		; last_tcnt1 and set the duty (limited by STARTUP) and
-		; set POWER_ON.
-		rcall	wait_timeout_init
-		sts	start_delay, ZH
-		ldi	temp1, RCP_TOT		; Start with a short timeout to stop quickly
-		mov	rc_timeout, temp1	; if we see no further pulses after the first.
-		ldi	temp1, 6		; Do not enable FETs during first cycle to
-		sts	powerskip, temp1	; see if motor is running, and align to it.
-		ldi	temp1, ENOUGH_GOODIES	; If we can follow without a timeout, do not
-		sts	goodies, temp1		; continue in startup mode (long ZC filtering).
-		outi	TCCR2, T2CLK		; Enable PWM (ZL has been set to pwm_wdr)
-
+		rjmp	wait_for_power_on_init
 
 ;-----bko-----------------------------------------------------------------
 ; **** running control loop ****
 
-run1:
+runLoop:
 		rcall	wait_for_high
 		com1com2
 		rcall	wait_for_low
@@ -449,11 +423,11 @@ run1:
 
 		lds	temp1, brake_want
 		cpse	temp1, ZH
-		rjmp	run_to_brake
+		rjmp	restart_control
 		lds	temp1, goodies
 		movw	YL, sys_control_l
 		cpi	temp1, ENOUGH_GOODIES
-		brcc	startComplete
+		brcc	startComplete 	; ELSE {goodies++ ;
 		inc	temp1
 		sts	goodies, temp1
 		; Build up sys_control to PWR_MAX_START in steps.
@@ -467,16 +441,13 @@ startComplete:
 		; will stay at MAX_POWER unless timing is lost.
 		adiw	YL, (POWER_RANGE + 31) / 32
 		ldi2	temp1, temp2, MAX_POWER
-run6_3:		cp	YL, temp1
+		cp	YL, temp1
 		cpc	YH, temp2
-		brcs	run6_4
+		brcs	lessThanMAX
 		movw	sys_control_l, temp1
-		rjmp	run1
-run6_4:		movw	sys_control_l, YL
-		rjmp	run1
-
-run_to_brake:	rjmp	restart_control
-restart_run:	rjmp	start_from_running
+		rjmp	runLoop
+lessThanMAX:	movw	sys_control_l, YL
+		rjmp	runLoop
 
 ;-----bko-----------------------------------------------------------------
 demag_timeout:
@@ -529,11 +500,6 @@ wait_timeout_init:
 		sbr	flags1, (1<<STARTUP)	; Leave running mode
 		rjmp	wait_commutation	; Update timing and duty.
 ;-----bko-----------------------------------------------------------------
-wait_for_low:	cbr	flags1, (1<<ACO_EDGE_HIGH)
-		rjmp	wait_for_edge
-;-----bko-----------------------------------------------------------------
-wait_for_high:	sbr	flags1, (1<<ACO_EDGE_HIGH)
-;-----bko-----------------------------------------------------------------
 ; Here we wait for the zero-crossing on the undriven phase to synchronize
 ; with the motor timing. The voltage of the undriven phase should cross
 ; the average of all three phases at half of the way into the 60-degree
@@ -568,6 +534,9 @@ wait_for_high:	sbr	flags1, (1<<ACO_EDGE_HIGH)
 ; fall through to regular startup with ZC check count at 0xff. This lets
 ; us start from braking, RC timeout, or power-up without misaligning.
 ;
+wait_for_low:	cbr	flags1, (1<<ACO_EDGE_HIGH)
+		rjmp	wait_for_edge
+wait_for_high:	sbr	flags1, (1<<ACO_EDGE_HIGH)
 wait_for_edge:
 		lds	temp1, powerskip	; Are we trying to track a maybe running motor?
 		subi	temp1, 1

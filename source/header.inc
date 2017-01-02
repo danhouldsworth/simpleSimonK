@@ -63,7 +63,6 @@
 .equ	POWER_RANGE	= 1000 + MIN_DUTY
 
 .equ	MAX_POWER	= (POWER_RANGE-1)
-.equ	PWR_COOL_START	= (POWER_RANGE/24) ; Power limit while starting to reduce heating
 .equ	PWR_MIN_START	= (POWER_RANGE/6) ; Power limit while starting (to start)
 .equ	PWR_MAX_START	= (POWER_RANGE/4) ; Power limit while starting (if still not running)
 
