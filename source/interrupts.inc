@@ -37,12 +37,7 @@ t1ovfl_int:	in	i_sreg, SREG
 		lds	i_temp1, tcnt1x
 		inc	i_temp1
 		sts	tcnt1x, i_temp1
-		andi	i_temp1, 15			; Every 16 overflows
-		brne	t1ovfl_int1
-		tst	rc_timeout
-		breq	t1ovfl_int1
-		dec	rc_timeout
-t1ovfl_int1:	out	SREG, i_sreg
+		out	SREG, i_sreg
 		reti
 ;-----bko-----------------------------------------------------------------
 
@@ -77,7 +72,6 @@ rising_edge:
 
 rcpint_fail:
 		in	i_sreg, SREG
-		clr	rc_timeout
 		rjmp	rcpint_exit
 
 falling_edge:
@@ -159,4 +153,10 @@ wait_inner:	in	temp1, TIFR
 		dec	temp2
 		brne	wait2ms
 
-		rjmp	control_start
+		sei
+		GRN_off
+		RED_off
+		cbr	flags0, (1<<SET_DUTY)
+		outi	TCCR1B, T1CLK 		; Set next ICP to rising edge
+
+		rjmp	waitForValidAndZeroDutyToArm

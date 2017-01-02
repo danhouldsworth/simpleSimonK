@@ -343,25 +343,17 @@ switch_power_off:
 		all_nFETs_off temp1
 		ret
 ;-----bko-----------------------------------------------------------------
-control_start:
-		sei
-control_disarm:	GRN_off 			; LEDs off while disarmed
-		RED_off
-		cbr	flags0, (1<<SET_DUTY)	; We need to count a full rc_timeout for safe arming
 
-		outi	TCCR1B, T1CLK 		; Set next ICP to rising edge
-
-i_rc_puls1:	; Wait for arming input
+waitForValidAndZeroDutyToArm:
 		cbr	flags1, (1<<EVAL_RC)
-i_rc_puls2:	wdr
-		sbrc	flags1, EVAL_RC
-		rjmp	i_rc_puls_rx
-		rjmp	i_rc_puls2
-i_rc_puls_rx:	rcall	evaluate_rc
+waitEVAL_RC:	wdr
+		sbrs	flags1, EVAL_RC
+		rjmp	waitEVAL_RC
+		rcall	evaluate_rc
 		lds	YL, rc_duty_l
 		lds	YH, rc_duty_h
 		adiw	YL, 0			; Test for zero
-		brne	i_rc_puls1
+		brne	waitForValidAndZeroDutyToArm
 
 ;-----bko-----------------------------------------------------------------
 restart_control:
@@ -421,7 +413,6 @@ start_from_running:
 		ldi	temp1, ENOUGH_GOODIES	; If we can follow without a timeout, do not
 		sts	goodies, temp1		; continue in startup mode (long ZC filtering).
 		outi	TCCR2, T2CLK		; Enable PWM (ZL has been set to pwm_wdr)
-
 
 ;-----bko-----------------------------------------------------------------
 ; **** running control loop ****

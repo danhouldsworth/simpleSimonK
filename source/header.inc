@@ -96,7 +96,7 @@
 .def	tcnt2h		= r8		; timer2 high byte
 .def	i_sreg		= r9		; status register save in interrupts
 .def	temp7		= r10		; really aux temporary (limited operations)
-.def	rc_timeout	= r11
+;.def	rc_timeout	= r11
 .def	sys_control_l	= r12		; duty limit low (word register aligned)
 .def	sys_control_h	= r13		; duty limit high
 .def	timing_duty_l	= r14		; timing duty limit low
