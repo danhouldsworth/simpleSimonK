@@ -47,8 +47,6 @@
 .equ	DIR_PD		= (1 << AnFET) | (1 << BnFET) | (1 << CnFET) | (1 << ApFET)
 ;--------------------------------------------------------------------------
 
-.equ	MOTOR_REVERSE	= 0	; Reverse normal commutation direction (Armattan Motors 0 == CW, 1 == CCW)
-
 .equ	RCP_TOT		= 2	; Number of 65536us periods before considering rc pulse lost
 
 .equ	MAX_RC_PULS	= 2100	; Throw away any pulses longer than this
@@ -74,9 +72,6 @@
 .equ	TIMEOUT_START	= 48000	; Timeout per commutation for ZC during starting
 .equ	START_DSTEP_US	= 8	; Microseconds per start delay step
 .equ	START_DELAY_INC	= 15	; Wait step count increase (wraps in a byte)
-.equ	START_MOD_INC	= 4	; Start power modulation step count increase (wraps in a byte)
-.equ	START_MOD_LIMIT	= 48	; Value at which power is reduced to avoid overheating
-.equ	START_FAIL_INC	= 16	; start_tries step count increase (wraps in a byte, upon which we disarm)
 
 .equ	ENOUGH_GOODIES	= 12	; This many start cycles without timeout will transition to running mode
 .equ	ZC_CHECK_FAST	= 12	; Number of ZC check loops under which PWM noise should not matter
@@ -267,55 +262,6 @@
 		ldi	flags2, (1<<C_FET) ; Clear all but this FET flag
 		ApFET_off
 		AnFET_off
-.endmacro
-
-; REVERSE ORDER
-.macro com1com6
-		; An on, Cn off
-		set_comp_phase_c
-		ldi	flags2, (1<<A_FET) ; Clear all but this FET flag
-		CpFET_off
-		CnFET_off
-.endmacro
-
-.macro com2com1
-		; Bp on, Ap off
-		set_comp_phase_a
-		ApFET_off
-		sbrc	flags1, POWER_ON
-		BpFET_on
-.endmacro
-
-.macro com3com2
-		; Cn on, Bn off
-		set_comp_phase_b
-		ldi	flags2, (1<<C_FET) ; Clear all but this FET flag
-		BpFET_off
-		BnFET_off
-.endmacro
-
-.macro com4com3
-		; Ap on, Cp off
-		set_comp_phase_c
-		CpFET_off
-		sbrc	flags1, POWER_ON
-		ApFET_on
-.endmacro
-
-.macro com5com4
-		; Bn on, An off
-		set_comp_phase_a
-		ldi	flags2, (1<<B_FET) ; Clear all but this FET flag
-		ApFET_off
-		AnFET_off
-.endmacro
-
-.macro com6com5
-		; Cp on, Bp off
-		set_comp_phase_b
-		BpFET_off
-		sbrc	flags1, POWER_ON
-		CpFET_on
 .endmacro
 
 .MACRO RED_on

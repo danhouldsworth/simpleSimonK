@@ -421,8 +421,6 @@ start_from_running:
 		; set POWER_ON.
 		rcall	wait_timeout_init
 		sts	start_delay, ZH
-		sts	start_modulate, ZH
-		sts	start_fail, ZH
 		ldi	temp1, RCP_TOT		; Start with a short timeout to stop quickly
 		mov	rc_timeout, temp1	; if we see no further pulses after the first.
 		ldi	temp1, 6		; Do not enable FETs during first cycle to
@@ -436,20 +434,6 @@ start_from_running:
 ; **** running control loop ****
 
 run1:
-	.if MOTOR_REVERSE
-		rcall	wait_for_low
-		com1com6
-		rcall	wait_for_high
-		com6com5
-		rcall	wait_for_low
-		com5com4
-		rcall	wait_for_high
-		com4com3
-		rcall	wait_for_low
-		com3com2
-		rcall	wait_for_high
-		com2com1
-	.else
 		rcall	wait_for_high
 		com1com2
 		rcall	wait_for_low
@@ -462,7 +446,6 @@ run1:
 		com5com6
 		rcall	wait_for_low
 		com6com1
-	.endif
 
 		lds	temp1, brake_want
 		cpse	temp1, ZH
@@ -470,35 +453,14 @@ run1:
 		lds	temp1, goodies
 		movw	YL, sys_control_l
 		cpi	temp1, ENOUGH_GOODIES
-		brcc	run6_2
+		brcc	startComplete
 		inc	temp1
 		sts	goodies, temp1
 		; Build up sys_control to PWR_MAX_START in steps.
 		adiw	YL, (POWER_RANGE + 47) / 48
 		ldi2	temp1, temp2, PWR_MAX_START
-		; If we've been trying to start for a while,
-		; modulate power to reduce heating.
-		lds	temp3, start_fail
-		lds	temp4, start_modulate
-		subi	temp4, -START_MOD_INC
-		sts	start_modulate, temp4
-		brne	run6_1
-		; If we've been trying for a long while, give up.
-		subi	temp3, -START_FAIL_INC
-		breq	start_failed
-		sts	start_fail, temp3
-run6_1:		; Allow first two loops at full power, then modulate.
-		cpi	temp3, START_FAIL_INC + 1
-		brcs	run6_3
-		cpi	temp4, START_MOD_LIMIT
-		brcs	run6_3
-		ldi2	temp1, temp2, PWR_COOL_START
-		rjmp	run6_3
-
-run6_2:
+startComplete:
 		cbr	flags1, (1<<STARTUP)
-		sts	start_fail, ZH
-		sts	start_modulate, ZH
 		RED_off
 		; Build up sys_control to MAX_POWER in steps.
 		; once running, sys_control
@@ -516,11 +478,6 @@ run6_4:		movw	sys_control_l, YL
 run_to_brake:	rjmp	restart_control
 restart_run:	rjmp	start_from_running
 
-;-----bko-----------------------------------------------------------------
-start_failed:
-		rcall	switch_power_off
-		cbr	flags0, (1<<SET_DUTY)
-		rjmp	control_disarm
 ;-----bko-----------------------------------------------------------------
 demag_timeout:
 		ldi	ZL, low(pwm_wdr)	; Stop PWM switching
