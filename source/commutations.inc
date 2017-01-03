@@ -310,6 +310,7 @@ switch_power_off:
 waitForValidAndZeroDutyToArm:
 		cbr	flags1, (1<<EVAL_RC)
 waitEVAL_RC:	wdr
+		GRN_on
 		sbrs	flags1, EVAL_RC
 		rjmp	waitEVAL_RC
 		rcall	evaluate_rc
