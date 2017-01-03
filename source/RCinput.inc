@@ -1,7 +1,6 @@
 ;-----bko-----------------------------------------------------------------
 evaluate_rc:
 		cbr	flags1, (1<<EVAL_RC)
-		sts	brake_want, ZH
 		movw	temp1, rx_l		; Atomic copy of rc pulse length
  		cpi	temp1, byte1(MIN_RC_PULS * CPU_MHZ) ; (temp1:2 == MIN_RC_PULS) ?
  		ldi	temp3, byte2(MIN_RC_PULS * CPU_MHZ)
@@ -15,9 +14,6 @@ puls_long_enough:
 		sbc	temp2, YH
 		brcc	puls_plus
 		; Fall through to stop/zero in no reverse case
-puls_zero_brake:
-		ldi	YL, 1
-		sts	brake_want, YL		; Set desired brake to 1 (neutral brake)
 puls_zero:	clr	YL
 		clr	YH
 		rjmp	rc_duty_set

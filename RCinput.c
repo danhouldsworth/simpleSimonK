@@ -2,8 +2,6 @@
 
 void evaluate_rc(){
 	flags1 &= ~(1 << EVAL_RC);	// clear flag EVAL_RC
-	brake_want 	= 0;
-
 }
 
 ISR(reset){
@@ -37,7 +35,6 @@ ISR(reset){
 		// 	stsi 	puls_low_h, high(16000)
 		// 	stsi 	fwd_scale_l, low(4096) 	; (POWER_RANGE - MIN_DUTY) * 0xffff / (1000us * 16MHz)
 		// 	stsi 	fwd_scale_h, high(4096)
-		// 	stsi 	brake_sub, 0xff 	; BRAKE_SPEED fastest
 
 	wait_ms(30);
 }

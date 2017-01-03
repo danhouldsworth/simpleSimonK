@@ -26,7 +26,6 @@ start_modulate:	.byte	1	; Start modulation counter (to reduce heating from PWR_M
 start_fail:	.byte   1	; Number of start_modulate loops for eventual failure and disarm
 rc_duty_l:	.byte	1	; desired duty cycle
 rc_duty_h:	.byte	1
-brake_want:	.byte	1	; Type of brake desired
 ;**** **** **** **** ****
 ; The following entries are RAM settings
 puls_high_l:	.byte	1	;
@@ -35,6 +34,4 @@ puls_low_l:	.byte	1	;
 puls_low_h:	.byte	1	;
 fwd_scale_l:	.byte	1	; 16.16 multipliers to scale input RC pulse to POWER_RANGE
 fwd_scale_h:	.byte	1
-brake_sub:	.byte	1	; Brake speed subtrahend (power of two)
-dummy_spare: 	.byte	1
 RAM_end:	.byte	1

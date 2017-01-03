@@ -22,42 +22,6 @@
 ; pwm_*_high and pwm_again are called when the particular on/off cycle
 ; is longer than will fit in 8 bits. This is tracked in tcnt2h.
 
-pwm_brake_on:
-		cpse	tcnt2h, ZH
-		rjmp	pwm_again
-		in	i_sreg, SREG
-		nFET_brake
-		ldi	i_temp1, 0xff
-		cp	off_duty_l, i_temp1	; Check for 0 off-time
-		cpc	off_duty_h, ZH
-		breq	pwm_brake_on1
-		ldi	ZL, low(pwm_brake_off)	; Not full on, so turn it off next
-		lds	i_temp2, brake_sub
-		sub	sys_control_l, i_temp2
-		brne	pwm_brake_on1
-		neg	duty_l			; Increase duty
-		sbc	duty_h, i_temp1		; i_temp1 is 0xff aka -1
-		com	duty_l
-		com	off_duty_l		; Decrease off duty
-		sbc	off_duty_l, ZH
-		sbc	off_duty_h, ZH
-		com	off_duty_l
-pwm_brake_on1:	mov	tcnt2h, duty_h
-		out	SREG, i_sreg
-		out	TCNT2, duty_l
-		reti
-
-pwm_brake_off:
-		cpse	tcnt2h, ZH
-		rjmp	pwm_again
-		in	i_sreg, SREG
-		ldi	ZL, low(pwm_brake_on)
-		mov	tcnt2h, off_duty_h
-		all_nFETs_off i_temp1
-		out	SREG, i_sreg
-		out	TCNT2, off_duty_l
-		reti
-
 pwm_on_fast_high:
 pwm_on_high:
 		in	i_sreg, SREG
@@ -354,32 +318,14 @@ waitEVAL_RC:	wdr
 		adiw	YL, 0			; Test for zero
 		brne	waitForValidAndZeroDutyToArm
 
-startOrBrake:
+;startOrBrake:
 		GRN_on				; Green on while armed and idle or braking
 		RED_off
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
 		cbr	flags0, (1<<SET_DUTY)	; Do not yet set duty on input
 
-		lds	temp3, brake_want
-		cp	temp3, ZH
-		breq	start_from_running
-; braking
-		rcall	switch_power_off	; Disable any active brake
-		ldi2	YL, YH, BRAKE_POWER
-
-		;set_brake_duty
-		ldi2	temp1, temp2, MAX_POWER
-		sub	temp1, YL		; Calculate OFF duty
-		sbc	temp2, YH
-		rcall	set_new_duty_set
-		ldi	ZL, low(pwm_brake_off)	; Enable PWM brake mode
-		clr	tcnt2h
-		clr	sys_control_l		; Abused as duty update divisor
-		outi	TCCR2, T2CLK		; Enable PWM, cleared later by switch_power_off
-
-start_from_running:
+;start_from_running:
 		wdr
-		rcall	switch_power_off
 		comp_init temp1			; init comparator
 		RED_off
 		GRN_off
@@ -411,9 +357,6 @@ runLoop:
 		rcall	wait_for_low
 		com6com1
 
-		lds	temp1, brake_want
-		cpse	temp1, ZH
-		rjmp	startOrBrake
 		lds	temp1, goodies
 		movw	YL, sys_control_l
 		cpi	temp1, ENOUGH_GOODIES

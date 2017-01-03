@@ -25,7 +25,7 @@
 t1oca_int:	in	i_sreg, SREG
 		lds	i_temp1, ocr1ax
 		subi	i_temp1, 1
-		brcc	t1oca_int1
+		brcc	t1oca_int1 	; Set if the absolute value of K is larger than the absolute value of Rd; cleared otherwise.
 		cbr	flags0, (1<<OCT1_PENDING)	; signal OCT1A passed
 t1oca_int1:	sts	ocr1ax, i_temp1
 		out	SREG, i_sreg
@@ -129,7 +129,6 @@ clear_loop1:	cp	ZL, r0
 		stsi 	puls_low_h, high(16000)
 		stsi 	fwd_scale_l, low(4096) 	; (POWER_RANGE - MIN_DUTY) * 0xffff / (1000us * 16MHz)
 		stsi 	fwd_scale_h, high(4096)
-		stsi 	brake_sub, 0xff 	; BRAKE_SPEED fastest
 
 	; Wait for power to settle -- this must be no longer than 64ms
 wait30ms:	ldi	temp2, 15
