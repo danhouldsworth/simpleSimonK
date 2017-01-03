@@ -317,19 +317,9 @@ waitEVAL_RC:	wdr
 		lds	YH, rc_duty_h
 		adiw	YL, 0			; Test for zero
 		brne	waitForValidAndZeroDutyToArm
-
-;startOrBrake:
-		GRN_on				; Green on while armed and idle or braking
-		RED_off
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
 		cbr	flags0, (1<<SET_DUTY)	; Do not yet set duty on input
-
-;start_from_running:
-		wdr
 		comp_init temp1			; init comparator
-		RED_off
-		GRN_off
-
 		ldi2	YL, YH, PWR_MIN_START	; Start with limited power to reduce the chance that we
 		movw	sys_control_l, YL	; align to a timing harmonic
 

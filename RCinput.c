@@ -99,11 +99,8 @@ ISR(t1ovfl_int){
 
 ISR(t2ovfl_int){
 	//Possible IJMPs
-	pwm_brake_off
-	pwm_brake_on
 	pwm_on
 	pwm_off
-
 	pwm_on_ptr
 	pwm_wdr
 }

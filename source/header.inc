@@ -178,12 +178,6 @@
 		out	PORTD, @0
 .endmacro
 
-.macro nFET_brake
-		in	i_temp1, PORTD
-		sbr	i_temp1, (1<<AnFET) | (1<<BnFET) | (1<<CnFET)
-		out	PORTD, i_temp1
-.endmacro
-
 ;-- Analog comparator sense macros ---------------------------------------
 ; We enable and disable the ADC to override ACME when one of the sense
 ; pins is AIN1 instead of an ADC pin. In the future, this will allow
