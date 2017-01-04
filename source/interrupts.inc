@@ -117,6 +117,11 @@ clear_loop1:	cp	ZL, r0
 		outi	WDTCR, (1<<WDCE) | (1<<WDE)
 		outi	WDTCR, (1<<WDE)		; Fastest option: ~16.3ms timeout
 
+	; init comparator
+		in	temp1, SFIOR
+		sbr	temp1, (1<<ACME)	; set Analog Comparator Multiplexer Enable
+		out	SFIOR, temp1
+
 	; Enable timer interrupts (we only do this late to improve beep quality)
 		ldi	temp1, (1<<TOIE1) | (1<<OCIE1A) | (1<<TOIE2) | (1<<TICIE1)
 		out	TIFR, temp1		; Clear TOIE1, OCIE1A, and TOIE2 flags

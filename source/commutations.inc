@@ -297,7 +297,6 @@ waitEVAL_RC:	wdr
 		brne	waitForValidAndZeroDutyToArm
 		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
 		cbr	flags0, (1<<SET_DUTY)	; Do not yet set duty on input
-		comp_init temp1			; init comparator
 		ldi2	YL, YH, PWR_MIN_START	; Start with limited power to reduce the chance that we
 		movw	sys_control_l, YL	; align to a timing harmonic
 

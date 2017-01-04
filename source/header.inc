@@ -179,28 +179,16 @@
 ; We enable and disable the ADC to override ACME when one of the sense
 ; pins is AIN1 instead of an ADC pin. In the future, this will allow
 ; reading from the ADC at the same time.
-
-.macro comp_init
-		in	@0, SFIOR
-		sbr	@0, (1<<ACME)	; set Analog Comparator Multiplexer Enable
-		out	SFIOR, @0
-.endmacro
-.macro comp_adc_disable
+.macro set_comp_phase_a
+		cbi	ADMUX, 0	; set comparator multiplexer to phase A
 		cbi	ADCSRA, ADEN	; Disable ADC if we enabled it to get AIN1
 .endmacro
-.macro comp_adc_enable
-		sbi	ADCSRA, ADEN	; Enable ADC to effectively disable ACME
-.endmacro
-.macro set_comp_phase_a
-		outi	ADMUX, mux_a	; set comparator multiplexer to phase A
-		comp_adc_disable
-.endmacro
 .macro set_comp_phase_b
-		outi	ADMUX, mux_b	; set comparator multiplexer to phase B
-		comp_adc_disable
+		sbi	ADMUX, 0	; set comparator multiplexer to phase B
+		cbi	ADCSRA, ADEN	; Disable ADC if we enabled it to get AIN1
 .endmacro
 .macro set_comp_phase_c
-		comp_adc_enable
+		sbi	ADCSRA, ADEN	; Enable ADC to effectively disable ACME
 .endmacro
 
 ;-----bko-----------------------------------------------------------------
