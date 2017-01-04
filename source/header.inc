@@ -163,18 +163,6 @@
 		sbi	PORTB, CpFET
 .endmacro
 
-.macro all_pFETs_off
-		ApFET_off
-		BpFET_off
-		CpFET_off
-.endmacro
-
-.macro all_nFETs_off 		; 3clks vs 6above !!
-		in	@0, PORTD
-		cbr	@0, (1<<AnFET) | (1<<BnFET) | (1<<CnFET)
-		out	PORTD, @0
-.endmacro
-
 ;-- Analog comparator sense macros ---------------------------------------
 ; We enable and disable the ADC to override ACME when one of the sense
 ; pins is AIN1 instead of an ADC pin. In the future, this will allow

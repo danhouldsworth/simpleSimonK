@@ -275,15 +275,6 @@ wait_OCT1_tot:	sbrc	flags1, EVAL_RC
 		rjmp	wait_OCT1_tot		; Wait for commutation time
 		ret
 ;-----bko-----------------------------------------------------------------
-switch_power_off:
-		out	TCCR2, ZH		; Disable PWM
-		ldi	temp1, (1<<TOV2)
-		out	TIFR, temp1		; Clear pending PWM interrupts
-		ldi	ZL, low(pwm_wdr)	; Stop PWM switching
-		all_pFETs_off temp1
-		all_nFETs_off temp1
-		ret
-;-----bko-----------------------------------------------------------------
 waitForValidAndZeroDutyToArm:
 		cbr	flags1, (1<<EVAL_RC)
 waitEVAL_RC:	wdr
@@ -295,7 +286,7 @@ waitEVAL_RC:	wdr
 		lds	YH, rc_duty_h
 		adiw	YL, 0			; Test for zero
 		brne	waitForValidAndZeroDutyToArm
-		rcall	switch_power_off	; Disables PWM timer, turns off all FETs
+		ldi	ZL, low(pwm_wdr)	; Stop PWM switching
 		cbr	flags0, (1<<SET_DUTY)	; Do not yet set duty on input
 		ldi2	YL, YH, PWR_MIN_START	; Start with limited power to reduce the chance that we
 		movw	sys_control_l, YL	; align to a timing harmonic
