@@ -44,8 +44,6 @@ pwm_on:
 		BpFET_off
 		sbrc	flags2, C_FET
 		CpFET_off
-
-pwm_on_fast:
 		sbrc	flags2, A_FET
 		AnFET_on
 		sbrc	flags2, B_FET
@@ -76,7 +74,7 @@ pwm_off:
 		sbrc	flags2, C_FET
 		CnFET_off
 		out	TCNT2, off_duty_l	; 1 cycle
-		sbrc	flags1, SKIP_CPWM	; 2 cycles if skip, 1 cycle otherwise
+		;sbrc	flags1, SKIP_CPWM	; 2 cycles if skip, 1 cycle otherwise
 		reti
 		sbrc	flags2, A_FET
 		ApFET_on
@@ -180,7 +178,7 @@ set_new_duty_set:
 		; When off duty is short, skip complementary PWM; otherwise,
 		; compensate the off_duty time to account for the overhead.
 		set
-		ldi	temp4, pwm_on_fast	; Short off period: skip complementary PWM
+		ldi	temp4, pwm_on		; Short off period: skip complementary PWM
 		cpse	temp2, ZH
 		ldi	temp4, pwm_on_fast_high	; Off period >= 0x100
 		cpi 	temp1, byte1(CPWM_OVERHEAD_HIGH + CPWM_OVERHEAD_LOW)
