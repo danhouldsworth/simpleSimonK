@@ -19,10 +19,9 @@
 ; try to keep the switch on close to the start of pwm_on and switch off
 ; close to the end of pwm_off to minimize the power bump at full power.
 ;
-; pwm_*_high and pwm_again are called when the particular on/off cycle
+; pwm_*_high and pwm_off_again are called when the particular on/off cycle
 ; is longer than will fit in 8 bits. This is tracked in tcnt2h.
 
-pwm_on_fast_high:
 pwm_on_high:
 		in	i_sreg, SREG
 		dec	tcnt2h
@@ -31,7 +30,7 @@ pwm_on_high:
 pwm_on_again:	out	SREG, i_sreg
 		reti
 
-pwm_again:
+pwm_off_again:
 		in	i_sreg, SREG
 		dec	tcnt2h
 		out	SREG, i_sreg
@@ -55,13 +54,12 @@ pwm_on:
 		out	TCNT2, duty_l
 		reti
 
-pwm_wdr:					; Just reset watchdog
-		wdr
+pwm_wdr:	wdr				; Just reset watchdog
 		reti
 
 pwm_off:
 		cpse	tcnt2h, ZH		; 2 cycles to skip when tcnt2h is 0
-		rjmp	pwm_again
+		rjmp	pwm_off_again
 		wdr				; 1 cycle: watchdog reset
 		sbrc	flags1, FULL_POWER	; 2 cycles to skip if not full power
 		rjmp	pwm_on			; None of this off stuff if full power
@@ -74,15 +72,7 @@ pwm_off:
 		sbrc	flags2, C_FET
 		CnFET_off
 		out	TCNT2, off_duty_l	; 1 cycle
-		;sbrc	flags1, SKIP_CPWM	; 2 cycles if skip, 1 cycle otherwise
 		reti
-		sbrc	flags2, A_FET
-		ApFET_on
-		sbrc	flags2, B_FET
-		BpFET_on
-		sbrc	flags2, C_FET
-		CpFET_on
-		reti				; 4 cycles
 
 ;-----bko-----------------------------------------------------------------
 update_timing:
@@ -177,16 +167,7 @@ set_new_duty11:
 set_new_duty_set:
 		; When off duty is short, skip complementary PWM; otherwise,
 		; compensate the off_duty time to account for the overhead.
-		set
 		ldi	temp4, pwm_on		; Short off period: skip complementary PWM
-		cpse	temp2, ZH
-		ldi	temp4, pwm_on_fast_high	; Off period >= 0x100
-		cpi 	temp1, byte1(CPWM_OVERHEAD_HIGH + CPWM_OVERHEAD_LOW)
- 		cpc 	temp2, ZH
-		brcs	set_new_duty21		; Off period < off-to-on cycle count plus interrupt overhead
-		clt				; Not short off period, unset SKIP_CPWM
-		sbiw	temp1, CPWM_OVERHEAD_HIGH ; temp1:temp2
-		ldi	temp4, pwm_on		; Off period < 0x100
 		cpse	temp2, ZH
 		ldi	temp4, pwm_on_high	; Off period >= 0x100
 set_new_duty21:
@@ -196,7 +177,6 @@ set_new_duty21:
 		cli				; Critical section (off_duty & flags together)
 		movw	off_duty_l, temp1	; Set new OFF duty for PWM interrupt
 		sts	pwm_on_ptr, temp4	; Set Next PWM ON interrupt vector
-		bld	flags1, SKIP_CPWM	; If to skip complementary PWM
 		sei
 		ret
 set_new_duty_full:
@@ -207,7 +187,6 @@ set_new_duty_zero:
 		; Power off
 		cbr	flags1, (1<<FULL_POWER) | (1<<POWER_ON)
 		ldi	temp4, pwm_off		; Skip the on phase entirely
-		set				; Skip complementary PWM
 		rjmp	set_new_duty21
 ;-----bko-----------------------------------------------------------------
 ; Multiply the 24-bit timing in temp1:temp2:temp3 by temp4 and add the top

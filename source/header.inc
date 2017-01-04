@@ -53,8 +53,6 @@
 .equ	MIN_RC_PULS	= 900	; Throw away any pulses shorter than this
 
 .equ	CPU_MHZ		= 16 	; Ticks per us
-.equ	CPWM_OVERHEAD_LOW 	= 9
-.equ	CPWM_OVERHEAD_HIGH 	= 7
 
 ; Minimum PWM on-time (too low and FETs won't turn on, hard starting)
 .equ	MIN_DUTY	= 56 	; * CPU_MHZ / 16
@@ -105,7 +103,6 @@
 .def	flags1		= r17	; state flags
 	.equ	POWER_ON	= 0	; if set, switching fets is enabled
 	.equ	FULL_POWER	= 1	; 100% on - don't switch off, but do OFF_CYCLE working
-	.equ	SKIP_CPWM	= 2	; if set, skip complementary PWM (for short off period)
 	.equ	EVAL_RC		= 4	; if set, evaluate rc command while waiting for OCT1
 	.equ	ACO_EDGE_HIGH	= 5	; if set, looking for ACO high - same bit position as ACO
 	.equ	STARTUP		= 6	; if set, startup-phase is active
