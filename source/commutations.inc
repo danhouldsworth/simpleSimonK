@@ -303,17 +303,37 @@ waitEVAL_RC:	wdr
 
 runLoop:
 		rcall	wait_for_high
-		com1com2
+		; A --> C
+		set_comp_phase_b
+		sbrc	flags1, POWER_ON
+		ApFET_on
+
 		rcall	wait_for_low
-		com2com3
+		ldi	flags2, (1<<B_FET) ; Clear all but this FET flag
+		; A --> B
+		set_comp_phase_c
+
 		rcall	wait_for_high
-		com3com4
+		; C --> B
+		set_comp_phase_a
+		sbrc	flags1, POWER_ON
+		CpFET_on
+
 		rcall	wait_for_low
-		com4com5
+		ldi	flags2, (1<<A_FET) ; Clear all but this FET flag
+		; C --> A
+		set_comp_phase_b
+
 		rcall	wait_for_high
-		com5com6
+		; B --> A
+		set_comp_phase_c
+		sbrc	flags1, POWER_ON
+		BpFET_on
+
 		rcall	wait_for_low
-		com6com1
+		ldi	flags2, (1<<C_FET) ; Clear all but this FET flag
+		; B --> C
+		set_comp_phase_a
 
 		lds	temp1, goodies
 		movw	YL, sys_control_l

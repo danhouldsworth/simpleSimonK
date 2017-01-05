@@ -168,66 +168,23 @@
 ; pins is AIN1 instead of an ADC pin. In the future, this will allow
 ; reading from the ADC at the same time.
 .macro set_comp_phase_a
+		ApFET_off
+		AnFET_off
 		cbi	ADMUX, 0	; set comparator multiplexer to phase A
 		cbi	ADCSRA, ADEN	; Disable ADC if we enabled it to get AIN1
 .endmacro
 .macro set_comp_phase_b
+		BpFET_off
+		BnFET_off
 		sbi	ADMUX, 0	; set comparator multiplexer to phase B
 		cbi	ADCSRA, ADEN	; Disable ADC if we enabled it to get AIN1
 .endmacro
 .macro set_comp_phase_c
+		CpFET_off
+		CnFET_off
 		sbi	ADCSRA, ADEN	; Enable ADC to effectively disable ACME
 .endmacro
 
-;-----bko-----------------------------------------------------------------
-
-.macro com1com2
-		; Bp off, Ap on
-		set_comp_phase_b
-		BpFET_off
-		sbrc	flags1, POWER_ON
-		ApFET_on
-.endmacro
-
-.macro com2com3
-		; Cn off, Bn on
-		set_comp_phase_c
-		ldi	flags2, (1<<B_FET) ; Clear all but this FET flag
-		CpFET_off
-		CnFET_off
-.endmacro
-
-.macro com3com4
-		; Ap off, Cp on
-		set_comp_phase_a
-		ApFET_off
-		sbrc	flags1, POWER_ON
-		CpFET_on
-.endmacro
-
-.macro com4com5
-		; Bn off, An on
-		set_comp_phase_b
-		ldi	flags2, (1<<A_FET) ; Clear all but this FET flag
-		BpFET_off
-		BnFET_off
-.endmacro
-
-.macro com5com6
-		; Cp off, Bp on
-		set_comp_phase_c
-		CpFET_off
-		sbrc	flags1, POWER_ON
-		BpFET_on
-.endmacro
-
-.macro com6com1
-		; An off, Cn on
-		set_comp_phase_a
-		ldi	flags2, (1<<C_FET) ; Clear all but this FET flag
-		ApFET_off
-		AnFET_off
-.endmacro
 
 .MACRO RED_on
 	sbi	DDRC, red_led
