@@ -302,38 +302,38 @@ waitEVAL_RC:	wdr
 		outi	TCCR2, T2CLK		; Enable PWM (ZL has been set to pwm_wdr)
 
 runLoop:
+		ldi	flags2, (1<<C_FET)
+		; B --> C
+		set_comp_phase_a
 		rcall	wait_for_high
+
 		; A --> C
 		set_comp_phase_b
 		sbrc	flags1, POWER_ON
 		ApFET_on
-
 		rcall	wait_for_low
-		ldi	flags2, (1<<B_FET) ; Clear all but this FET flag
+
+		ldi	flags2, (1<<B_FET)
 		; A --> B
 		set_comp_phase_c
-
 		rcall	wait_for_high
+
 		; C --> B
 		set_comp_phase_a
 		sbrc	flags1, POWER_ON
 		CpFET_on
-
 		rcall	wait_for_low
-		ldi	flags2, (1<<A_FET) ; Clear all but this FET flag
+
+		ldi	flags2, (1<<A_FET)
 		; C --> A
 		set_comp_phase_b
-
 		rcall	wait_for_high
+
 		; B --> A
 		set_comp_phase_c
 		sbrc	flags1, POWER_ON
 		BpFET_on
-
 		rcall	wait_for_low
-		ldi	flags2, (1<<C_FET) ; Clear all but this FET flag
-		; B --> C
-		set_comp_phase_a
 
 		lds	temp1, goodies
 		movw	YL, sys_control_l
